@@ -35,10 +35,9 @@ class ImageEncoder(Encoder):
         binary_secret_data = _data_to_binarray(secret_data, num_lsb)
         binary_secret_and_mask = np.bitwise_or(255 - (2 ** num_lsb - 1), binary_secret_data)
         data_len = len(binary_secret_data)
-        num_modified_subpixels = int(np.ceil(data_len // num_lsb))
-        if num_modified_subpixels > n_bytes:
+        if data_len > n_bytes:
             raise ValueError("[!] Insufficient bytes, need bigger image or less data.")
-        padding = n_bytes - num_modified_subpixels
+        padding = n_bytes - data_len
         # padded values should be 255
         binary_secret_and_mask = np.pad(binary_secret_and_mask, (0, padding), constant_values=255)
         binary_secret_and_mask = binary_secret_and_mask.reshape(*cover_file_bytes.shape) # reshape to the shape of the cover file
