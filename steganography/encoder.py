@@ -3,7 +3,7 @@ import sys
 
 import abc
 import io
-from typing import Union
+from typing import Union, NamedTuple
 import wave
 from math import prod
 
@@ -27,7 +27,8 @@ class Encoder(abc.ABC):
         self,
         cover_file_bytes: np.ndarray,
         secret_data: str,
-        num_lsb: int = 1
+        num_lsb: int = 1,
+        bit_depth: int = 8
     ):
         """Encodes secret data into a cover frame using the specified number of LSBs
 
@@ -43,7 +44,7 @@ class Encoder(abc.ABC):
         n_bytes = prod(cover_file_bytes.shape)
         binary_secret_data = _data_to_binarray(secret_data, num_lsb)
         and_mask = np.bitwise_or(
-            255 - (2 ** num_lsb - 1),
+            (2 ** bit_depth - 1) - (2 ** num_lsb - 1),
             binary_secret_data
         )
         data_len = len(binary_secret_data)
@@ -115,15 +116,16 @@ class AudioEncoder(Encoder):
         # raise NotImplementedError("Method not implemented.")
         stop_condition = "====="
         secret_data += stop_condition
-        return super().encode(cover_file_bytes, secret_data, num_lsb)
+        encoded_data = super().encode(cover_file_bytes, secret_data, num_lsb)
+        return encoded_data
         
 
-    def read_file(self, filename) -> np.ndarray:
+    def read_file(self, filename) -> (np.ndarray, NamedTuple):
         if os.path.isfile(filename) and os.path.splitext(filename)[1] == ".wav":
             audio = wave.open(filename, mode="rb")
             audio_data = audio.readframes(audio.getnframes())
             audio_data = np.frombuffer(audio_data, dtype=np.uint8)
-            return audio_data
+            return audio_data, audio.getparams()
 
 
 class VideoEncoder(Encoder):

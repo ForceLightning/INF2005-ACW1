@@ -21,7 +21,17 @@ class TestEncodeDecode:
         audio_file = "tests/test.wav"
         audio = wave.open(audio_file, mode="rb")
         audio_data = audio.readframes(audio.getnframes())
-        audio_data = np.frombuffer(audio_data, dtype=np.uint8)
+        audio_bits = audio.getsampwidth() * 8
+        match audio_bits:
+            case 8:
+                audio_data = np.frombuffer(audio_data, dtype=np.uint8)
+            case 16:
+                audio_data = np.frombuffer(audio_data, dtype=np.int16)
+            case 32:
+                audio_data = np.frombuffer(audio_data, dtype=np.int32)
+            case _:
+                audio_data = np.frombuffer(audio_data, dtype=np.uint8)
+        audio_data = audio_data.reshape(-1, audio.getnchannels())
         return [AudioEncoder(), AudioDecoder(), audio_data]
     
     @pytest.fixture
