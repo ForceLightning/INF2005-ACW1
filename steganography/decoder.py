@@ -73,4 +73,24 @@ class VideoDecoder(Decoder):
         super().__init__(*args, **kwargs)
 
     def decode(self, encoded_data, num_lsb) -> str:
+        # ! this is slow !
+        return super()._decode_frame(encoded_data, num_lsb)
+
+    def batched_decode(
+        self,
+        encoded_data,
+        num_lsb,
+        batch_size=10,
+    ) -> str:
+        """Decode the encoded video file in batches
+
+        Args:
+            encoded_data (np.ndarray): video frames
+            num_lsb (int): number of LSBs to use for decoding
+            batch_size (int, optional): number of video frames to decode at a time. Defaults to 10.
+
+        Returns:
+            str: encoded data
+        """
         raise NotImplementedError("Method not implemented.")
+        

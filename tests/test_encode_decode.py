@@ -38,7 +38,15 @@ class TestEncodeDecode:
     def video(self):
         video_file = "tests/test.mp4"
         video = cv2.VideoCapture(video_file)
-        return [VideoEncoder(), VideoDecoder(), video]
+        video_data = []
+        while video.isOpened():
+            ret, frame = video.read()
+            if ret:
+                video_data.append(frame)
+            else:
+                break
+        video_data = np.array(video_data)
+        return [VideoEncoder(), VideoDecoder(), video_data]
     
     @pytest.fixture
     def lsb(self):

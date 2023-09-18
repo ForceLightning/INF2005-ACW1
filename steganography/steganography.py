@@ -17,7 +17,6 @@ class Steganography:
     def __init__(self, *args, **kwargs):
         self.encoder = None
         self.decoder = None
-        pass
 
     def _to_bin(
         self,

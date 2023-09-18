@@ -28,7 +28,6 @@ class Encoder(abc.ABC):
         cover_file_bytes: np.ndarray,
         secret_data: str,
         num_lsb: int = 1,
-        bit_depth: int = 8
     ):
         """Encodes secret data into a cover frame using the specified number of LSBs
 
@@ -42,6 +41,7 @@ class Encoder(abc.ABC):
             IndexError: num_lsb must be between 1 and 8
         """
         n_bytes = prod(cover_file_bytes.shape)
+        bit_depth = cover_file_bytes.dtype.itemsize * 8
         binary_secret_data = _data_to_binarray(secret_data, num_lsb)
         and_mask = np.bitwise_or(
             (2 ** bit_depth - 1) - (2 ** num_lsb - 1),
@@ -93,12 +93,12 @@ class ImageEncoder(Encoder):
         self,
         cover_file_bytes: np.ndarray,
         secret_data: str,
-        num_lsb: int = 1
+        num_lsb: int = 1,
     ):
         stop_condition = "====="
         secret_data += stop_condition
         return super().encode(cover_file_bytes, secret_data, num_lsb)
-    
+
     def read_file(self, filename) -> np.ndarray:
         if os.path.isfile(filename) and os.path.splitext(filename)[1] in [".png", ".jpg", ".jpeg"]:
             image = cv2.imread(filename)
@@ -111,14 +111,12 @@ class AudioEncoder(Encoder):
         self,
         cover_file_bytes: np.ndarray,
         secret_data: str,
-        num_lsb: int = 1
+        num_lsb: int = 1,
     ):
-        # raise NotImplementedError("Method not implemented.")
         stop_condition = "====="
         secret_data += stop_condition
         encoded_data = super().encode(cover_file_bytes, secret_data, num_lsb)
         return encoded_data
-        
 
     def read_file(self, filename) -> (np.ndarray, NamedTuple):
         if os.path.isfile(filename) and os.path.splitext(filename)[1] == ".wav":
@@ -135,11 +133,25 @@ class VideoEncoder(Encoder):
         self,
         cover_file_bytes: np.ndarray,
         secret_data: str,
-        num_lsb: int = 1
+        num_lsb: int = 1,
     ):
-        raise NotImplementedError("Method not implemented.")
+        stop_condition = "====="
+        secret_data += stop_condition
+        encoded_data = super().encode(cover_file_bytes, secret_data, num_lsb)
+        return encoded_data
 
     def read_file(self, filename) -> np.ndarray:
         if os.path.isfile(filename) and os.path.splitext(filename)[1] in [".mp4", ".avi"]:
             video = cv2.VideoCapture(filename)
             return video
+        else:
+            raise FileNotFoundError("File not found.")
+
+    def batched_encode(
+        self,
+        video_capture: cv2.VideoCapture,
+        secret_data: str,
+        num_lsb: int = 1,
+        minibatch_size: int = 30,
+    ):
+        raise NotImplementedError("Method not implemented.")
