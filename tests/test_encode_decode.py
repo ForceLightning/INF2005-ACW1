@@ -1,6 +1,7 @@
 import pytest
 import wave
 
+import numpy as np
 import cv2
 
 from steganography.decoder import ImageDecoder, AudioDecoder, VideoDecoder
@@ -19,7 +20,9 @@ class TestEncodeDecode:
     def audio(self):
         audio_file = "tests/test.wav"
         audio = wave.open(audio_file, mode="rb")
-        return [AudioEncoder(), AudioDecoder(), audio]
+        audio_data = audio.readframes(audio.getnframes())
+        audio_data = np.frombuffer(audio_data, dtype=np.uint8)
+        return [AudioEncoder(), AudioDecoder(), audio_data]
     
     @pytest.fixture
     def video(self):
