@@ -5,20 +5,21 @@ import io
 from typing import Union
 import wave
 
-import PIL
-from PIL import Image
+import numpy as np
 import cv2
 
 from steganography.encoder import *
 from steganography.decoder import *
-
+from steganography.util import _file_extension_to_handler, DecoderHandler
 
 class Steganography:
     """Class for encoding and decoding data into a cover file using LSB steganography
     """
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         self.encoder = None
         self.decoder = None
+        self.encoded_data = None
+        self.encoded_data_params = None
 
     def _to_bin(
         self,
@@ -36,10 +37,10 @@ class Steganography:
 
     def encode(
         self,
-        cover_file: Union[str, bytes, io.BytesIO, Image.Image, wave.Wave_read, cv2.VideoCapture],
-        secret_data: Union[str, bytes, int],
-        output_file: Union[str, io.BytesIO, None] = None
-    ) -> Union[str, bytes, Image.Image, wave.Wave_write, cv2.VideoCapture, None]:
+        cover_file: str,
+        secret_data: str,
+        output_file: Union[str, None] = None
+    ) -> Union[str, bytes, np.ndarray, wave.Wave_write, cv2.VideoCapture, None]:
         """Encodes `secret_data` into `cover_file`
 
         Args:
@@ -57,21 +58,31 @@ class Steganography:
             Union[bytes, Image.Image, cv2.VideoCapture, None]:
                 Encoded data if `output_file` is not None, else of type `cover_file`
         """
-        raise NotImplementedError("Method not implemented.")
-        # TODO(IO): Check if `cover_file` is a valid filepath
-        # TODO(IO): Check if `output_file` is a valid filepath (if not None)
-        # TODO(IO): Open file handlers for `cover_file` and `output_file` (if not None)
+        # Check if `cover_file` is a valid filepath
+        if not os.path.isfile(cover_file):
+            raise FileNotFoundError(f"File '{cover_file}' not found.")
+        else:
+            # Initialise encoder based on `cover_file` type (image, audio, or video)
+            handler = _file_extension_to_handler(cover_file)
+            self.encoder = handler.value()()
+            self.decoder = DecoderHandler(handler.name).value()()
+            data = self.encoder.read_file(cover_file)
+            # Encode `secret_data` into `cover_file`
+            self.encoded_data = self.encoder.encode(data, secret_data)
+        # Check if `output_file` is a valid filepath (if not None)
+        match output_file:
+            case str():
+                if not os.path.isfile(output_file):
+                    # create file
+                    path_to_file = os.path.dirname(output_file)
+                    if path_to_file:
+                        os.makedirs(path_to_file, exist_ok=True)
 
-        # TODO(Encoder): Initialise encoder based on `cover_file` type (image, audio, or video)
-        # ! use self.encoder = ImageEncoder() or
-        # ! self.encoder = AudioEncoder() or
-        # ! self.encoder = VideoEncoder()
-
-        # TODO(Encoder): Encode `secret_data` into `cover_file`
-        # ! use self.encoder.encode(cover_file, secret_data, output_file)
-
-        # TODO(IO): Save encoded data to `output_file` (if not None)
-        # TODO(IO): Close file handlers for `cover_file` and `output_file` (if not None)
+            # Open file handlers for `cover_file` and `output_file` (if not None)
+            # Save encoded data to `output_file` (if not None)
+                self.encoder.write_file(output_file)
+            case _:
+                return self.encoded_data
 
     def decode(
         self,
