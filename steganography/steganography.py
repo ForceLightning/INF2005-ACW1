@@ -95,33 +95,25 @@ class Steganography:
 
     def decode(
         self,
-        encoded_file: Union[str, bytes, io.BytesIO,
-                            Image.Image, cv2.VideoCapture]
+        encoded_file: str
     ) -> str:
         """Decodes `encoded_file` and returns the decoded data
 
         Args:
-            encoded_file (Union[str, bytes, io.BytesIO, Image.Image, cv2.VideoCapture]):
-                Encoded file, file-like object or filepath to decode
+            encoded_file (str): Encoded filepath to decode
 
         Raises:
             NotImplementedError: Method not implemented.
-            TypeError: `encoded_file` is not of type str, bytes,
-            io.BytesIO, Image.Image, or cv2.VideoCapture
 
         Returns:
             str: Decoded data
         """
         #raise NotImplementedError("Method not implemented.")
         data = None #will hold file data
-        # TODO(IO): Check if `encoded_file` is a valid filepath if of type str (if not None)
         # Check if `encoded_file` is a valid filepath
         if not os.path.isfile(encoded_file):
             raise FileNotFoundError(f"File '{encoded_file}' not found.")
         else:
-            # TODO(Decoder): Initialise decoder based on `encoded_file` type (image, audio, or video)
-            # ! use self.decoder = ImageDecoder() or self.decoder = AudioDecoder()
-            # ! or self.decoder = VideoDecoder()
             # Initialise decoder based on `encoded_file` type (image, audio, or video)
             ext = os.path.splitext(encoded_file)[1]
             if ext in IMAGE_EXTENSIONS:
@@ -137,26 +129,7 @@ class Steganography:
                 raise io.UnsupportedOperation(f"File extension '{ext}' not supported.")
 
             data, _ = self.decoder.read_file(encoded_file)
-            # TODO(Decoder): Decode `encoded_file`
-            # ! use self.decoder.decode(encoded_file)
+            # Decode `encoded_file`
             decoded_data = self.decoder.decode(data)
 
         return decoded_data
-        # TODO(IO): Open file handler for `decoded_data` if of type str
-        # Check if `encoded_file` is a valid filepath (if not None)
-        # TODO(IO): Close file handler for `encoded_file` if of type str
-#        match decoded_data:
-#            case str():
-                # if not os.path.isfile(encoded_file):
-                #     # create file
-                #     path_to_file = os.path.dirname(encoded_file)
-                #     if path_to_file:
-                #         os.makedirs(path_to_file, exist_ok=True)
-
-                # Open file handlers for `encoded_file`(if not None)
-                #data = self.decoder.read_file(encoded_file)
-                
-
-
-
-
