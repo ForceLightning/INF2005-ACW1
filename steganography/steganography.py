@@ -75,7 +75,7 @@ class Steganography:
                 self.decoder = VideoDecoder()
             else:
                 raise io.UnsupportedOperation(f"File extension '{ext}' not supported.")
-            data, _ = self.encoder.read_file(cover_file)
+            data, params = self.encoder.read_file(cover_file)
             # Encode `secret_data` into `cover_file`
             self.encoded_data = self.encoder.encode(data, secret_data)
         # Check if `output_file` is a valid filepath (if not None)
@@ -87,9 +87,9 @@ class Steganography:
                     if path_to_file:
                         os.makedirs(path_to_file, exist_ok=True)
 
-            # Open file handlers for `cover_file` and `output_file` (if not None)
-            # Save encoded data to `output_file` (if not None)
-                self.encoder.write_file(self.encoded_data, output_file)
+                # Open file handlers for `cover_file` and `output_file` (if not None)
+                # Save encoded data to `output_file` (if not None)
+                self.encoder.write_file(self.encoded_data, output_file, params)
             case _:
                 return self.encoded_data
 
@@ -108,18 +108,15 @@ class Steganography:
         Returns:
             str: Decoded data
         """
-        #raise NotImplementedError("Method not implemented.")
-        # To hold file data
-        data = None 
         # Check if `encoded_file` is a valid filepath
         if not os.path.isfile(encoded_file):
             raise FileNotFoundError(f"File '{encoded_file}' not found.")
         else:
             # Check if `encoded_file` is a valid filepath if of type str (if not None)
-            match decoded_data:
+            match encoded_file:
                 case str():
                     # Initialise decoder based on `encoded_file` type (image, audio, or video)
-                    ext = os.path.splitext(encoded_file)[1]
+                    ext = os.path.splitext(encoded_file)[1][1:]
                     if ext in IMAGE_EXTENSIONS:
                         self.encoder = ImageEncoder()
                         self.decoder = ImageDecoder()
@@ -133,10 +130,9 @@ class Steganography:
                         raise io.UnsupportedOperation(f"File extension '{ext}' not supported.")
 
                     # Read file to be decoded
-                    data, _ = self.decoder.read_file(encoded_file)
+                    data, params = self.decoder.read_file(encoded_file)
                     # Decode `encoded_file`
                     decoded_data = self.decoder.decode(data)
-
 
                 case _:
                 # return nothing if `encoded_data` is not a string
