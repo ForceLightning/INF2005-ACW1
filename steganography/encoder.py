@@ -13,7 +13,7 @@ from PIL import Image
 import cv2
 import numpy as np
 
-from steganography.util import _data_to_binarray, IMAGE_EXTENSIONS, AUDIO_EXTENSIONS, VIDEO_EXTENSIONS
+import steganography.util as util
 
 
 class Encoder(abc.ABC):
@@ -46,7 +46,7 @@ class Encoder(abc.ABC):
         """
         n_bytes = prod(cover_file_bytes.shape)
         bit_depth = cover_file_bytes.dtype.itemsize * 8
-        binary_secret_data = _data_to_binarray(secret_data, num_lsb)
+        binary_secret_data = util._data_to_binarray(secret_data, num_lsb)
         and_mask = np.bitwise_or(
             (2 ** bit_depth - 1) - (2 ** num_lsb - 1),
             binary_secret_data
@@ -122,11 +122,11 @@ class ImageEncoder(Encoder):
         secret_data += stop_condition
         return super().encode(cover_file_bytes, secret_data, num_lsb)
 
-    def read_file(self, filename) -> np.ndarray:
+    def read_file(self, filename) -> (np.ndarray, NamedTuple):
         if os.path.isfile(filename):
-            if os.path.splitext(filename)[1] in IMAGE_EXTENSIONS:
+            if os.path.splitext(filename)[1] in util.IMAGE_EXTENSIONS:
                 image = cv2.imread(filename)
-                return image
+                return image, None
             else:
                 raise io.UnsupportedOperation("File is not an image.")
         else:
@@ -153,7 +153,7 @@ class AudioEncoder(Encoder):
 
     def read_file(self, filename) -> (np.ndarray, NamedTuple):
         if os.path.isfile(filename): 
-            if os.path.splitext(filename)[1] in AUDIO_EXTENSIONS:
+            if os.path.splitext(filename)[1] in util.AUDIO_EXTENSIONS:
                 audio = wave.open(filename, mode="rb")
                 audio_data = audio.readframes(audio.getnframes())
                 audio_data = np.frombuffer(audio_data, dtype=np.uint8)
@@ -186,7 +186,7 @@ class VideoEncoder(Encoder):
 
     def read_file(self, filename) -> (np.ndarray, NamedTuple):
         if os.path.isfile(filename): 
-            if os.path.splitext(filename)[1] in VIDEO_EXTENSIONS:
+            if os.path.splitext(filename)[1] in util.VIDEO_EXTENSIONS:
                 video = cv2.VideoCapture(filename)
                 video_params = namedtuple("VideoParams", ["fps", "width", "height"])(video.get(cv2.CAP_PROP_FPS), video.get(cv2.CAP_PROP_FRAME_WIDTH), video.get(cv2.CAP_PROP_FRAME_HEIGHT))
                 return video, video_params

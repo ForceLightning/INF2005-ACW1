@@ -10,7 +10,7 @@ import cv2
 
 from steganography.encoder import *
 from steganography.decoder import *
-from steganography.util import _file_extension_to_handler, DecoderHandler
+from steganography.util import IMAGE_EXTENSIONS, AUDIO_EXTENSIONS, VIDEO_EXTENSIONS
 
 class Steganography:
     """Class for encoding and decoding data into a cover file using LSB steganography
@@ -63,9 +63,18 @@ class Steganography:
             raise FileNotFoundError(f"File '{cover_file}' not found.")
         else:
             # Initialise encoder based on `cover_file` type (image, audio, or video)
-            handler = _file_extension_to_handler(cover_file)
-            self.encoder = handler.value()()
-            self.decoder = DecoderHandler(handler.name).value()()
+            ext = os.path.splitext(cover_file)[1]
+            if ext in IMAGE_EXTENSIONS:
+                self.encoder = ImageEncoder()
+                self.decoder = ImageDecoder()
+            elif ext in AUDIO_EXTENSIONS:
+                self.encoder = AudioEncoder()
+                self.decoder = AudioDecoder()
+            elif ext in VIDEO_EXTENSIONS:
+                self.encoder = VideoEncoder()
+                self.decoder = VideoDecoder()
+            else:
+                raise io.UnsupportedOperation(f"File extension '{ext}' not supported.")
             data = self.encoder.read_file(cover_file)
             # Encode `secret_data` into `cover_file`
             self.encoded_data = self.encoder.encode(data, secret_data)
