@@ -75,7 +75,7 @@ class Steganography:
                 self.decoder = VideoDecoder()
             else:
                 raise io.UnsupportedOperation(f"File extension '{ext}' not supported.")
-            data = self.encoder.read_file(cover_file)
+            data, _ = self.encoder.read_file(cover_file)
             # Encode `secret_data` into `cover_file`
             self.encoded_data = self.encoder.encode(data, secret_data)
         # Check if `output_file` is a valid filepath (if not None)
@@ -89,7 +89,7 @@ class Steganography:
 
             # Open file handlers for `cover_file` and `output_file` (if not None)
             # Save encoded data to `output_file` (if not None)
-                self.encoder.write_file(output_file)
+                self.encoder.write_file(self.encoded_data, output_file)
             case _:
                 return self.encoded_data
 
@@ -112,15 +112,51 @@ class Steganography:
         Returns:
             str: Decoded data
         """
-        raise NotImplementedError("Method not implemented.")
-        # TODO(IO): Check if `encoded_file` is a valid filepath if of type str
-        # TODO(IO): Open file handler for `encoded_file` if of type str
+        #raise NotImplementedError("Method not implemented.")
+        data = None #will hold file data
+        # TODO(IO): Check if `encoded_file` is a valid filepath if of type str (if not None)
+        # Check if `encoded_file` is a valid filepath
+        if not os.path.isfile(encoded_file):
+            raise FileNotFoundError(f"File '{encoded_file}' not found.")
+        else:
+            # TODO(Decoder): Initialise decoder based on `encoded_file` type (image, audio, or video)
+            # ! use self.decoder = ImageDecoder() or self.decoder = AudioDecoder()
+            # ! or self.decoder = VideoDecoder()
+            # Initialise decoder based on `encoded_file` type (image, audio, or video)
+            ext = os.path.splitext(encoded_file)[1]
+            if ext in IMAGE_EXTENSIONS:
+                self.encoder = ImageEncoder()
+                self.decoder = ImageDecoder()
+            elif ext in AUDIO_EXTENSIONS:
+                self.encoder = AudioEncoder()
+                self.decoder = AudioDecoder()
+            elif ext in VIDEO_EXTENSIONS:
+                self.encoder = VideoEncoder()
+                self.decoder = VideoDecoder()
+            else:
+                raise io.UnsupportedOperation(f"File extension '{ext}' not supported.")
 
-        # TODO(Decoder): Initialise decoder based on `encoded_file` type (image, audio, or video)
-        # ! use self.decoder = ImageDecoder() or self.decoder = AudioDecoder()
-        # ! or self.decoder = VideoDecoder()
+            data, _ = self.decoder.read_file(encoded_file)
+            # TODO(Decoder): Decode `encoded_file`
+            # ! use self.decoder.decode(encoded_file)
+            decoded_data = self.decoder.decode(data)
 
-        # TODO(Decoder): Decode `encoded_file`
-        # ! use self.decoder.decode(encoded_file)
-
+        return decoded_data
+        # TODO(IO): Open file handler for `decoded_data` if of type str
+        # Check if `encoded_file` is a valid filepath (if not None)
         # TODO(IO): Close file handler for `encoded_file` if of type str
+#        match decoded_data:
+#            case str():
+                # if not os.path.isfile(encoded_file):
+                #     # create file
+                #     path_to_file = os.path.dirname(encoded_file)
+                #     if path_to_file:
+                #         os.makedirs(path_to_file, exist_ok=True)
+
+                # Open file handlers for `encoded_file`(if not None)
+                #data = self.decoder.read_file(encoded_file)
+                
+
+
+
+
