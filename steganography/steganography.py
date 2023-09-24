@@ -143,6 +143,3 @@ class Steganography:
                     return None
 
         return decoded_data
-        # TODO(IO): Open file handler for `decoded_data` if of type str
-        # Check if `encoded_file` is a valid filepath (if not None)
-        # TODO(IO): Close file handler for `encoded_file` if of type str
