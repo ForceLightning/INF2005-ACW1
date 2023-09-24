@@ -104,12 +104,13 @@ class Encoder(abc.ABC):
         Raises:
             FileNotFoundError: File not found
         """
-        if not os.path.isfile(filename):
+        if os.path.isfile(filename):
+            warnings.warn("File already exists. Overwriting file.", UserWarning)
+        else:
             dir_to_file = os.path.dirname(filename)
             if not os.path.exists(dir_to_file):
                 os.makedirs(dir_to_file, exist_ok=True)
                 return
-        warnings.warn("File already exists. Overwriting file.", UserWarning)
 
 class ImageEncoder(Encoder):
     """ Class for encoding data into an image file
