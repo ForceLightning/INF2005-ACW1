@@ -201,8 +201,12 @@ class VideoDecoder(Decoder):
     """Video decoder class
     """
 
-    def decode(self, encoded_data, num_lsb) -> str:
-        self.decoded_data = super()._decode_frame(encoded_data, num_lsb)
+    def decode(
+        self,
+        encoded_data: np.ndarray,
+        num_lsb: int = 1
+    ) -> str:
+        self.decoded_data = self._batched_decode(encoded_data, num_lsb)
         return self.decoded_data
 
     def _batched_decode(
