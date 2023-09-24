@@ -95,19 +95,15 @@ class Steganography:
 
     def decode(
         self,
-        encoded_file: Union[str, bytes, io.BytesIO,
-                            Image.Image, cv2.VideoCapture]
+        encoded_file: str
     ) -> str:
         """Decodes `encoded_file` and returns the decoded data
 
         Args:
-            encoded_file (Union[str, bytes, io.BytesIO, Image.Image, cv2.VideoCapture]):
-                Encoded file, file-like object or filepath to decode
+            encoded_file (str): Encoded filepath to decode
 
         Raises:
             NotImplementedError: Method not implemented.
-            TypeError: `encoded_file` is not of type str, bytes,
-            io.BytesIO, Image.Image, or cv2.VideoCapture
 
         Returns:
             str: Decoded data
