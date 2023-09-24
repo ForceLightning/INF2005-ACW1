@@ -52,10 +52,13 @@ class TestEncodeDecode:
                 case _:
                     raise NotImplementedError("Method not implemented.")
             output_temp_filename = f"tests/output.{ext}"
+            if os.path.isfile(output_temp_filename):
+                os.remove(output_temp_filename)
             for num_lsb in lsb:
                 encoded_data = encoder.encode(cover_file, TestEncodeDecode.input_str, num_lsb)
                 encoder.write_file(encoded_data, output_temp_filename, params)
-                encoded_read_data = decoder.read_file(output_temp_filename)
+                encoded_read_data, read_data_params = decoder.read_file(output_temp_filename)
+                assert params == read_data_params
                 decoded_str = decoder.decode(encoded_read_data, num_lsb)
-                os.remove(output_temp_filename)
                 assert TestEncodeDecode.input_str == decoded_str
+                os.remove(output_temp_filename)

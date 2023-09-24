@@ -12,7 +12,7 @@ import re
 import numpy as np
 import cv2
 
-
+import steganography.util as util
 class Decoder(abc.ABC):
     def __init__(self, *args, **kwargs):
         self.decoded_data = ""
@@ -47,6 +47,7 @@ class Decoder(abc.ABC):
             str: decoded secret data
         """
         binary_data = ""
+        self.decoded_data = ""
         bit_depth = encoded_frame.dtype.itemsize * 8
         if num_lsb > bit_depth or num_lsb < 1:
             raise ValueError(f"num_lsb must be between 1 and {bit_depth}")
@@ -119,7 +120,7 @@ class ImageDecoder(Decoder):
     def read_file(
         self,
         filename: str
-    ) -> np.ndarray[Union[int, np.uint8, np.int16, np.int32]]:
+    ) -> (np.ndarray[Union[int, np.uint8, np.int16, np.int32]], NamedTuple):
         """Reads the image file into a numpy array
 
         Args:
@@ -162,7 +163,7 @@ class AudioDecoder(Decoder):
     def read_file(
         self,
         filename: str
-    ) -> np.ndarray[Union[int, np.uint8, np.int16, np.int32]]:
+    ) -> (np.ndarray[Union[int, np.uint8, np.int16, np.int32]], NamedTuple):
         """Reads the audio file into a numpy array
 
         Args:
@@ -175,13 +176,11 @@ class AudioDecoder(Decoder):
             np.ndarray[Union[int, np.uint8, np.int16, np.int32]]: audio data as a numpy array
         """
         super().read_file(filename)
-        if os.path.split(filename)[1] not in [".wav"]:
+        ext = os.path.splitext(filename)[1][1:]
+        if ext not in util.AUDIO_EXTENSIONS:
             raise ValueError(
                 f"Invalid audio file format. Only .wav files are supported.")
-        try:
-            audio = wave.open(filename, mode="rb")
-        except Exception:
-            raise
+        audio = wave.open(filename, mode="rb")
         audio_data = audio.readframes(audio.getnframes())
         audio_bits = audio.getsampwidth() * 8
         params = audio.getparams()
@@ -247,7 +246,7 @@ class VideoDecoder(Decoder):
     def read_file(
         self,
         filename: str
-    ) -> np.ndarray[Union[int, np.uint8, np.int16, np.int32]]:
+    ) -> (np.ndarray[Union[int, np.uint8, np.int16, np.int32]], NamedTuple):
         """Reads the video file into a numpy array
 
         Args:

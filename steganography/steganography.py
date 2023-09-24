@@ -63,7 +63,7 @@ class Steganography:
             raise FileNotFoundError(f"File '{cover_file}' not found.")
         else:
             # Initialise encoder based on `cover_file` type (image, audio, or video)
-            ext = os.path.splitext(cover_file)[1]
+            ext = os.path.splitext(cover_file)[1][1:]
             if ext in IMAGE_EXTENSIONS:
                 self.encoder = ImageEncoder()
                 self.decoder = ImageDecoder()

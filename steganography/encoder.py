@@ -2,6 +2,7 @@ import io
 import os
 import sys
 
+import warnings
 import abc
 from typing import Union, NamedTuple
 from collections import namedtuple
@@ -71,6 +72,8 @@ class Encoder(abc.ABC):
         # encode data into image with the bitwise operations A + (A * B)
         and_op = np.bitwise_and(cover_file_bytes, and_mask)
         or_op = np.bitwise_or(and_op, or_mask)
+        # ensure that the bit depth is the same
+        or_op = or_op.astype(cover_file_bytes.dtype)
         return or_op
 
     @abc.abstractmethod
@@ -106,7 +109,7 @@ class Encoder(abc.ABC):
             if not os.path.exists(dir_to_file):
                 os.makedirs(dir_to_file, exist_ok=True)
                 return
-        raise Warning("File already exists.")
+        warnings.warn("File already exists. Overwriting file.", UserWarning)
 
 class ImageEncoder(Encoder):
     """ Class for encoding data into an image file
@@ -124,11 +127,12 @@ class ImageEncoder(Encoder):
 
     def read_file(self, filename) -> (np.ndarray, NamedTuple):
         if os.path.isfile(filename):
-            if os.path.splitext(filename)[1] in util.IMAGE_EXTENSIONS:
+            ext = os.path.splitext(filename)[1][1:]
+            if ext in util.IMAGE_EXTENSIONS:
                 image = cv2.imread(filename)
                 return image, None
             else:
-                raise io.UnsupportedOperation("File is not an image.")
+                raise io.UnsupportedOperation(f"File with extension {ext} is not an image.")
         else:
             raise FileNotFoundError("File not found.")
 
@@ -153,13 +157,25 @@ class AudioEncoder(Encoder):
 
     def read_file(self, filename) -> (np.ndarray, NamedTuple):
         if os.path.isfile(filename): 
-            if os.path.splitext(filename)[1] in util.AUDIO_EXTENSIONS:
+            ext = os.path.splitext(filename)[1][1:]
+            if ext in util.AUDIO_EXTENSIONS:
                 audio = wave.open(filename, mode="rb")
                 audio_data = audio.readframes(audio.getnframes())
-                audio_data = np.frombuffer(audio_data, dtype=np.uint8)
-                return audio_data, audio.getparams()
+                audio_bits = audio.getsampwidth() * 8
+                params = audio.getparams()
+                match audio_bits:
+                    case 8:
+                        audio_data = np.frombuffer(audio_data, dtype=np.uint8)
+                    case 16:
+                        audio_data = np.frombuffer(audio_data, dtype=np.int16)
+                    case 32:
+                        audio_data = np.frombuffer(audio_data, dtype=np.int32)
+                    case _:
+                        audio_data = np.frombuffer(audio_data, dtype=np.uint8)
+                audio_data = audio_data.reshape(-1, audio.getnchannels())
+                return audio_data, params
             else:
-                raise io.UnsupportedOperation("File is not an audio file.")
+                raise io.UnsupportedOperation(f"File with extension {ext} is not an audio file.")
         else:
             raise FileNotFoundError("File not found.")
 
@@ -167,7 +183,7 @@ class AudioEncoder(Encoder):
         super().write_file(data, filename)
         audio = wave.open(filename, mode="wb")
         audio.setparams(params)
-        audio.writeframes(data[0].tobytes())
+        audio.writeframes(data.tobytes())
 
 
 class VideoEncoder(Encoder):
@@ -185,13 +201,29 @@ class VideoEncoder(Encoder):
         return encoded_data
 
     def read_file(self, filename) -> (np.ndarray, NamedTuple):
-        if os.path.isfile(filename): 
-            if os.path.splitext(filename)[1] in util.VIDEO_EXTENSIONS:
+        if os.path.isfile(filename):
+            ext = os.path.splitext(filename)[1][1:]
+            if ext in util.VIDEO_EXTENSIONS:
                 video = cv2.VideoCapture(filename)
-                video_params = namedtuple("VideoParams", ["fps", "width", "height"])(video.get(cv2.CAP_PROP_FPS), video.get(cv2.CAP_PROP_FRAME_WIDTH), video.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                return video, video_params
+                video_params = namedtuple(
+                    "VideoParams",
+                    ["fps", "width", "height"]
+                )(
+                    video.get(cv2.CAP_PROP_FPS),
+                    video.get(cv2.CAP_PROP_FRAME_WIDTH),
+                    video.get(cv2.CAP_PROP_FRAME_HEIGHT)
+                )
+                video_data = []
+                while video.isOpened():
+                    ret, frame = video.read()
+                    if ret:
+                        video_data.append(frame)
+                    else:
+                        break
+                video_data = np.array(video_data)
+                return video_data, video_params
             else:
-                raise io.UnsupportedOperation("File is not a video.")
+                raise io.UnsupportedOperation(f"File with extension {ext} is not a video.")
         else:
             raise FileNotFoundError("File not found.")
 
@@ -207,7 +239,7 @@ class VideoEncoder(Encoder):
     def write_file(self, data: np.ndarray, filename: str, params: NamedTuple = None):
         super().write_file(data, filename)
         fps = params.fps
-        video = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*"mp4v"), fps, (data.shape[1], data.shape[0]), True)
+        video = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*"mp4v"), fps, (data.shape[1], data.shape[2]), True)
         for frame in data:
             video.write(frame)
         video.release()
