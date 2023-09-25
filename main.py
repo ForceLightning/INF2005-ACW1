@@ -1,171 +1,147 @@
 import os
 import sys
-
+import threading
 from tkinter import *
 from tkinter.ttk import *
-from tkinter import filedialog
+from tkinter import filedialog, messagebox
+from PIL import Image, ImageTk
+import pygame
+from moviepy.editor import VideoFileClip
+from tkinterdnd2 import TkinterDnD, DND_FILES
 
 from steganography.steganography import Steganography
 
+# Initialize Steganography and Decoders
+stega = Steganography()
+
+# Function to handle drop event
+def drop(event):
+    file_path = event.data
+    print(f"File Path: {file_path}") # For debug
+    process_file(file_path, is_dropped=True)
+
+def display_image(label, file_path):
+    image = Image.open(file_path)
+    # Limit the size of the displayed image
+    image.thumbnail((200, 200))
+    photo = ImageTk.PhotoImage(image)
+    label.config(image=photo)
+    label.photo = photo
+
+def process_file(file_path, is_dropped=False):
+    if file_path:
+        file_extension = file_path.split('.')[-1].lower()
+        print(f"File Extension: {file_extension}")
+        if file_extension in ('jpg', 'jpeg', 'png', 'gif'):
+            if not is_dropped:
+                # Display Before Image
+                display_image(before_image, file_path)
+                # Encode and Display After Image
+                secret_message = secret_message_entry.get()
+                encoded_image_path = encode_image(file_path, secret_message)
+                display_image(after_image, encoded_image_path)
+            else:
+                # Display Dropped Image
+                display_image(dropped_image, file_path)
+        elif file_extension in ('mp3', 'wav'):
+            # Play Audio
+            play_audio(file_path)
+        elif file_extension in ('mp4', 'avi', 'mov'):
+            # Play Video
+            play_video(root, file_path)
+        else:
+            messagebox.showinfo("Unsupported Format", "Unsupported file format for preview.")
+
+def browse_file():
+    file_path = filedialog.askopenfilename()
+    process_file(file_path)
+
+
+def encode_image(file_path, secret_message):
+    # Encode the secret message into the image and save it as a new file
+    encoded_image_path = file_path.replace(".", "_encoded.")
+    stega.encode(file_path, secret_message, encoded_image_path)
+    return encoded_image_path
+
+def play_audio(file_path):
+    pygame.mixer.music.load(file_path)
+    pygame.mixer.music.play()
+
+def play_video(root, file_path):
+    video_thread = threading.Thread(target=play_video_clip, args=(root, file_path))
+    video_thread.start()
+
+def play_video_clip(root, file_path):
+    try:
+        video_clip = VideoFileClip(file_path)
+        video_clip.preview(fps=24, audio=True, threaded=True, winname="Video Preview")
+    except Exception as e:
+        messagebox.showerror("Error", f"Error playing video: {str(e)}")
 
 def main():
-    root = Tk()
+    global before_image, after_image, dropped_image, secret_message_entry, root
+    pygame.mixer.init()
+    pygame.font.init()
+
+    root = TkinterDnD.Tk()
     root.title("Steganography")
-    root.geometry("500x500")
+    root.geometry("800x600")  # Increased height to accommodate the new frame
     root.resizable(False, False)
     # Initialize Steganography
-    stega = Steganography()
 
     # TODO: Add and initialise widgets here
 
     # TODO(Widgets): Setup text input box for secret message
+
+    # Create a frame to hold the before and after images
+    frame = Frame(root)
+    frame.pack()
+
+    # Create Labels for before and after images
+    before_image_label = Label(frame, text="Before Image")
+    before_image_label.grid(row=0, column=0, padx=10, pady=10)
+    before_image = Label(frame)
+    before_image.grid(row=1, column=0, padx=10, pady=10)
+
+    after_image_label = Label(frame, text="After Image")
+    after_image_label.grid(row=0, column=1, padx=10, pady=10)
+    after_image = Label(frame)
+    after_image.grid(row=1, column=1, padx=10, pady=10)
+
+    # Create a frame to hold the dropped content and drop logic
+    dropped_frame = Frame(root)
+    dropped_frame.pack(pady=20)
+
+    dropped_image_label = Label(dropped_frame, text="Dropped Image")
+    dropped_image_label.pack()
+    dropped_image = Label(dropped_frame)
+    dropped_image.pack()
+
+    drop_label = Label(root, text="Drag and drop a file here")
+    drop_label.pack(pady=100)
+
+    # Bind the drop event to the drop function
+    root.drop_target_register(DND_FILES)
+    root.dnd_bind('<<Drop>>', drop)
+
+    # Secret message input box
     secret_message_label = Label(root, text="Enter Secret Message:")
     secret_message_label.pack()
     secret_message_entry = Entry(root, width=50)
     secret_message_entry.pack()
 
-    # TODO(Widgets): Setup button to open file dialog to select cover, encoded, and/or output files.
-    def browse_file():
-        file_path = filedialog.askopenfilename()
+    # Button for adding files to show on before image
     browse_button = Button(root, text="Browse Files", command=browse_file)
     browse_button.pack()
 
-    # TODO(Widgets): Add drag-and-drop functionality to select cover, encoded, and/or output files.
+    # TODO(GUI): Add a button to choose number of LSBs.
 
+    # TODO(GUI): Add a button to encode the secret message.
 
-    # TODO(Widgets): Setup button to encode secret message into cover file.
-    # ! use stega.encode(cover_file, secret_data, output_file)
-
-
-    # TODO(Widgets): Setup button to decode secret message from encoded file.
-    # ! use stega.decode(encoded_file)
-
-
-    # TODO(Stega/Encoder): Encode secret message in text box into cover file and save to output file
-
-    # TODO(Stega/Decoder): Display decoded secret message in text box
-
-    # TODO(Preview): Display/play cover image/audio/video in main window (or in a new window)
-    # ! maybe use system default image/audio/video viewer/player
-    # ! write to a temporary file, or use a library like PIL, OpenCV, or PyGame
+    # TODO(GUI): Add a button to open a file dialog for saving the encoded file.
 
     root.mainloop()
-    return
 
 
 if __name__ == "__main__":
     main()
-
-# import os
-# import sys
-# import tkinter as tk
-# from tkinter import filedialog
-# from tkinter import messagebox
-# from tkinter.ttk import *
-
-# from steganography import Steganography
-# from steganography.decoder import ImageDecoder, AudioDecoder, VideoDecoder
-# from steganography.encoder import ImageEncoder, AudioEncoder, VideoEncoder
-
-# # Initialize Steganography and Decoders
-# stega = Steganography()
-# image_decoder = ImageDecoder()
-# audio_decoder = AudioDecoder()
-# video_decoder = VideoDecoder()
-# image_encoder = ImageEncoder()
-# audio_encoder = AudioEncoder()
-# video_encoder = VideoEncoder()
-
-# # Function to handle the Encode button click
-# def encode_message():
-#     cover_file_path = cover_file_entry.get()
-#     secret_message = secret_message_text.get("1.0", "end-1c")
-#     output_file_path = output_file_entry.get()
-    
-#     try:
-#         stega.encode(cover_file_path, secret_message, output_file_path)
-#         messagebox.showinfo("Success", "Message encoded successfully!")
-#     except Exception as e:
-#         messagebox.showerror("Error", str(e))
-
-# # Function to handle the Decode button click
-# def decode_message():
-#     encoded_file_path = encoded_file_entry.get()
-    
-#     try:
-#         decoded_message = stega.decode(encoded_file_path)
-#         decoded_message_text.delete("1.0", "end")
-#         decoded_message_text.insert("1.0", decoded_message)
-#         messagebox.showinfo("Success", "Message decoded successfully!")
-#     except Exception as e:
-#         messagebox.showerror("Error", str(e))
-
-# # Function to open a file dialog and set the selected file path in an entry field
-# def browse_file(entry_widget):
-#     file_path = filedialog.askopenfilename()
-#     entry_widget.delete(0, "end")
-#     entry_widget.insert(0, file_path)
-
-# # Create the main window
-# root = tk.Tk()
-# root.title("Steganography")
-# root.geometry("500x500")
-# root.resizable(False, False)
-
-# # Label for secret message input
-# secret_message_label = tk.Label(root, text="Enter Secret Message:")
-# secret_message_label.pack()
-
-# # Text input box for secret message
-# secret_message_text = tk.Text(root, height=5, width=40)
-# secret_message_text.pack()
-
-# # Label for cover file input
-# cover_file_label = tk.Label(root, text="Select Cover File:")
-# cover_file_label.pack()
-
-# # Entry field for cover file path
-# cover_file_entry = tk.Entry(root, width=40)
-# cover_file_entry.pack()
-
-# # Button to browse for cover file
-# cover_file_browse_button = tk.Button(root, text="Browse", command=lambda: browse_file(cover_file_entry))
-# cover_file_browse_button.pack()
-
-# # Label for output file input
-# output_file_label = tk.Label(root, text="Select Output File:")
-# output_file_label.pack()
-
-# # Entry field for output file path
-# output_file_entry = tk.Entry(root, width=40)
-# output_file_entry.pack()
-
-# # Button to browse for output file
-# output_file_browse_button = tk.Button(root, text="Browse", command=lambda: browse_file(output_file_entry))
-# output_file_browse_button.pack()
-
-# # Button to encode secret message
-# encode_button = tk.Button(root, text="Encode", command=encode_message)
-# encode_button.pack()
-
-# # Label for encoded file input
-# encoded_file_label = tk.Label(root, text="Select Encoded File:")
-# encoded_file_label.pack()
-
-# # Entry field for encoded file path
-# encoded_file_entry = tk.Entry(root, width=40)
-# encoded_file_entry.pack()
-
-# # Button to browse for encoded file
-# encoded_file_browse_button = tk.Button(root, text="Browse", command=lambda: browse_file(encoded_file_entry))
-# encoded_file_browse_button.pack()
-
-# # Button to decode secret message
-# decode_button = tk.Button(root, text="Decode", command=decode_message)
-# decode_button.pack()
-
-# # Text widget to display decoded message
-# decoded_message_text = tk.Text(root, height=5, width=40)
-# decoded_message_text.pack()
-
-# root.mainloop()
