@@ -1,6 +1,7 @@
 import os
 import sys
 import threading
+
 from tkinter import *
 from tkinter.ttk import *
 from tkinter import filedialog, messagebox
@@ -80,6 +81,7 @@ def play_video_clip(root, file_path):
 
 def main():
     global before_image, after_image, dropped_image, secret_message_entry, root
+
     pygame.mixer.init()
     pygame.font.init()
 
@@ -87,11 +89,6 @@ def main():
     root.title("Steganography")
     root.geometry("800x600")  # Increased height to accommodate the new frame
     root.resizable(False, False)
-    # Initialize Steganography
-
-    # TODO: Add and initialise widgets here
-
-    # TODO(Widgets): Setup text input box for secret message
 
     # Create a frame to hold the before and after images
     frame = Frame(root)
@@ -134,7 +131,7 @@ def main():
     browse_button = Button(root, text="Browse Files", command=browse_file)
     browse_button.pack()
 
-    # TODO(GUI): Add a button to choose number of LSBs.
+    # TODO(GUI): Add a dropdown to choose number of LSBs.
 
     # TODO(GUI): Add a button to encode the secret message.
 
