@@ -3,7 +3,6 @@ import sys
 import threading
 
 from tkinter import *
-from tkinter.tix import IMAGE
 from tkinter.ttk import *
 from tkinter import filedialog, messagebox
 from PIL import Image, ImageTk

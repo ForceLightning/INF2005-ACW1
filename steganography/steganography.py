@@ -3,23 +3,25 @@ import sys
 
 import io
 from typing import Union
-import wave
+import tempfile
 
 import numpy as np
-import cv2
 
 from steganography.encoder import *
 from steganography.decoder import *
 from steganography.util import IMAGE_EXTENSIONS, AUDIO_EXTENSIONS, VIDEO_EXTENSIONS
 
+
 class Steganography:
     """Class for encoding and decoding data into a cover file using LSB steganography
     """
+
     def __init__(self):
         self.encoder = None
         self.decoder = None
         self.encoded_data = None
         self.encoded_data_params = None
+        self.temp_dir = None
 
     def _to_bin(
         self,
@@ -39,24 +41,25 @@ class Steganography:
         self,
         cover_file: str,
         secret_data: str,
-        output_file: Union[str, None] = None
-    ) -> Union[str, bytes, np.ndarray, wave.Wave_write, cv2.VideoCapture, None]:
+        output_file: Union[str, None, bool] = None
+    ) -> Union[str, np.ndarray]:
         """Encodes `secret_data` into `cover_file`
 
         Args:
             cover_file (Union[str, bytes, io.BytesIO, Image.Image, cv2.VideoCapture]):
                 Cover file, file-like object or filepath to encode `secret_data` into
             secret_data (Union[str, bytes, int]): Data to encode into `cover_file`
-            output_file (Union[str, io.BytesIO, None], optional):
-                Output file or filepath to write encoded data to. Defaults to None.
+            output_file (Union[str, None, bool], optional):
+                Output file or filepath to write encoded data to. If True, write to a temp directory.
+                Defaults to None.
 
         Raises:
             NotImplementedError: Method not implemented.
             FileNotFoundError: `cover_file` or `output_file` is not a valid filepath
 
         Returns:
-            Union[bytes, Image.Image, cv2.VideoCapture, None]:
-                Encoded data if `output_file` is not None, else of type `cover_file`
+            Union[str, np.ndarray]:
+                Encoded data if `output_file` is not None, else filepath to encoded data
         """
         # Check if `cover_file` is a valid filepath
         if not os.path.isfile(cover_file):
@@ -74,22 +77,43 @@ class Steganography:
                 self.encoder = VideoEncoder()
                 self.decoder = VideoDecoder()
             else:
-                raise io.UnsupportedOperation(f"File extension '{ext}' not supported.")
+                raise io.UnsupportedOperation(
+                    f"File extension '{ext}' not supported.")
             data, params = self.encoder.read_file(cover_file)
             # Encode `secret_data` into `cover_file`
             self.encoded_data = self.encoder.encode(data, secret_data)
-        # Check if `output_file` is a valid filepath (if not None)
+        output_ext = "."
+        match self.encoder:
+            case ImageEncoder():
+                output_ext += IMAGE_EXTENSIONS[0]
+            case AudioEncoder():
+                output_ext += AUDIO_EXTENSIONS[0]
+            case VideoEncoder():
+                output_ext += VIDEO_EXTENSIONS[0]
         match output_file:
             case str():
-                if not os.path.isfile(output_file):
+                # Check if output file extension is valid
+                output_filename = os.path.splitext(output_file)[0] + output_ext
+                # Check if `output_file` is a valid filepath (if not None)
+                if not os.path.isfile(output_filename):
                     # create file
-                    path_to_file = os.path.dirname(output_file)
+                    path_to_file = os.path.dirname(output_filename)
                     if path_to_file:
                         os.makedirs(path_to_file, exist_ok=True)
 
                 # Open file handlers for `cover_file` and `output_file` (if not None)
                 # Save encoded data to `output_file` (if not None)
-                self.encoder.write_file(self.encoded_data, output_file, params)
+                self.encoder.write_file(
+                    self.encoded_data, output_filename, params)
+                return output_filename
+            case True:
+                # Save encoded data to a temp directory
+                if self.temp_dir is None:
+                    self.temp_dir = tempfile.TemporaryDirectory()
+                temp_file = os.path.join(
+                    self.temp_dir.name, f"steganography{output_ext}")
+                self.encoder.write_file(self.encoded_data, temp_file, params)
+                return temp_file
             case _:
                 return self.encoded_data
 
@@ -127,7 +151,8 @@ class Steganography:
                         self.encoder = VideoEncoder()
                         self.decoder = VideoDecoder()
                     else:
-                        raise io.UnsupportedOperation(f"File extension '{ext}' not supported.")
+                        raise io.UnsupportedOperation(
+                            f"File extension '{ext}' not supported.")
 
                     # Read file to be decoded
                     data, params = self.decoder.read_file(encoded_file)
@@ -135,7 +160,7 @@ class Steganography:
                     decoded_data = self.decoder.decode(data)
 
                 case _:
-                # return nothing if `encoded_data` is not a string
+                    # return nothing if `encoded_data` is not a string
                     return None
 
         return decoded_data
