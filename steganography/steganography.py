@@ -41,7 +41,8 @@ class Steganography:
         self,
         cover_file: str,
         secret_data: str,
-        output_file: Union[str, None, bool] = None
+        output_file: Union[str, None, bool] = None,
+        num_lsb: int = 1
     ) -> Union[str, np.ndarray]:
         """Encodes `secret_data` into `cover_file`
 
@@ -52,6 +53,7 @@ class Steganography:
             output_file (Union[str, None, bool], optional):
                 Output file or filepath to write encoded data to. If True, write to a temp directory.
                 Defaults to None.
+            num_lsb (int, optional): Number of LSBs to encode data into. Defaults to 1.
 
         Raises:
             NotImplementedError: Method not implemented.
@@ -81,7 +83,7 @@ class Steganography:
                     f"File extension '{ext}' not supported.")
             data, params = self.encoder.read_file(cover_file)
             # Encode `secret_data` into `cover_file`
-            self.encoded_data = self.encoder.encode(data, secret_data)
+            self.encoded_data = self.encoder.encode(data, secret_data, num_lsb)
         output_ext = "."
         match self.encoder:
             case ImageEncoder():
@@ -119,12 +121,14 @@ class Steganography:
 
     def decode(
         self,
-        encoded_file: str
+        encoded_file: str,
+        num_lsb: int = 1
     ) -> str:
         """Decodes `encoded_file` and returns the decoded data
 
         Args:
             encoded_file (str): Encoded filepath to decode
+            num_lsb (int, optional): Number of LSBs to decode data from. Defaults to 1.
 
         Raises:
             NotImplementedError: Method not implemented.
@@ -157,7 +161,7 @@ class Steganography:
                     # Read file to be decoded
                     data, params = self.decoder.read_file(encoded_file)
                     # Decode `encoded_file`
-                    decoded_data = self.decoder.decode(data)
+                    decoded_data = self.decoder.decode(data, num_lsb)
 
                 case _:
                     # return nothing if `encoded_data` is not a string
