@@ -1,5 +1,4 @@
 from typing import Union
-import enum
 
 import numpy as np
 
@@ -30,8 +29,7 @@ def _data_to_binarray(data: Union[str, bytes, np.ndarray, int], num_lsb=1) -> np
         case bytes() | np.ndarray():
             return np.array(data, np.uint8)
         case _:
-            raise TypeError(f"data of type {type(data)} not supported.")
-
+            raise TypeError(f"data of type {type(data)} not supported.")    
 
 IMAGE_EXTENSIONS = ["bmp", "dib", "jpeg", "jpg", "jpe", "jp2", "png", "webp", "avif", "pbm", "pgm", "ppm", "sr", "ras", "tiff", "tif", "exr", "hdr", "pic"]
 # AUDIO_EXTENSIONS = ["wav", "mp3", "ogg", "flac", "wma", "m4a", "aiff", "aac", "alac", "pcm", "dsd", "mp2", "amr", "ape", "au", "awb", "dct", "dss", "dvf", "gsm", "iklax", "ivs", "m4p", "mmf", "mpc", "msv", "nmf", "nsf", "ra", "raw", "tta", "voc", "vox", "wv", "8svx"]

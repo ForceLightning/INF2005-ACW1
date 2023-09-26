@@ -167,78 +167,156 @@ dropped_file_path = None
 after_image_pil = None
 
 def main():
-    global before_image, after_image, dropped_image, secret_message_entry, root, lsb_combobox
+    global before_image, after_image, dropped_image, secret_message_entry, lsb_combobox, root
     pygame.mixer.init()
     pygame.font.init()
 
     root = TkinterDnD.Tk()
     root.title("Steganography")
-    root.geometry("1200x900")  # Increased height to accommodate the new frame
+    root.geometry("900x450")
     root.resizable(False, False)
 
-    # Create a frame to hold the before and after images
-    frame = Frame(root)
-    frame.pack()
+    # Encode Frame #
+    encode_frame = Frame(root)
+    encode_frame.grid(row=0, column=0, padx=10, pady=10)
 
-    # Create Labels for before and after images
-    before_image_label = Label(frame, text="Before Image")
-    before_image_label.grid(row=0, column=0, padx=10, pady=10)
-    before_image = Label(frame)
-    before_image.grid(row=1, column=0, padx=10, pady=10)
+    encode_label = Label(encode_frame, text="Encode", font=("Helvetica", 16))
+    encode_label.pack()
 
-    after_image_label = Label(frame, text="After Image")
-    after_image_label.grid(row=0, column=1, padx=10, pady=10)
-    after_image = Label(frame)
-    after_image.grid(row=1, column=1, padx=10, pady=10)
+    # Encode button frame
+    encode_button_frame = Frame(encode_frame)
+    encode_button_frame.pack()
 
-    button_frame = Frame(root)
-    button_frame.pack(pady=20)
+    # Encode buttons
+    load_file_button_encode = Button(encode_button_frame, text="Load File", command=browse_file)
+    load_file_button_encode.grid(row=0, column=0)
 
-    # Button for adding files to show on before image
-    browse_button = Button(button_frame, text="Select File To Encode", command=browse_file)
-    browse_button.grid(row=0, column=0, padx=10) 
+    play_file_button_encode = Button(encode_button_frame, text="Play File")
+    play_file_button_encode.grid(row=0, column=1)
 
-    # Button to clear the images
-    clear_button = Button(button_frame, text="Clear Images", command=clear_images)
-    clear_button.grid(row=0, column=1, padx=10)
+    before_image = Label(encode_frame)
+    before_image.pack()
 
-    # Create a frame to hold the dropped content and drop logic
-    dropped_frame = Frame(root)
-    dropped_frame.pack(pady=20)
+    
+    # Decode Frame #
+    decode_frame = Frame(root)
+    decode_frame.grid(row=0, column=1, padx=10, pady=10)
 
-    dropped_image_label = Label(dropped_frame, text="Dropped Image")
-    dropped_image_label.pack()
-    dropped_image = Label(dropped_frame)
-    dropped_image.pack()
+    decode_label = Label(decode_frame, text="Decode", font=("Helvetica", 16))
+    decode_label.pack()
 
-    drop_label = Label(root, text="Drag and drop a file here")
-    drop_label.pack(pady=100)
+    # Decode button frame
+    decode_button_frame = Frame(decode_frame)
+    decode_button_frame.pack()
 
-    # Bind the drop event to the drop function
-    root.drop_target_register(DND_FILES)
-    root.dnd_bind('<<Drop>>', drop)
+    # Decode buttons
+    load_file_button_decode = Button(decode_button_frame, text="Load File")
+    load_file_button_decode.grid(row=0, column=0)
 
-    # Secret message input box
-    secret_message_label = Label(root, text="Enter Secret Message:")
-    secret_message_label.pack()
-    secret_message_entry = Entry(root, width=50)
-    secret_message_entry.pack()
+    play_file_button_decode = Button(decode_button_frame, text="Play File")
+    play_file_button_decode.grid(row=0, column=1)
 
-    # Dropdown to choose number of LSBs.
-    lsb_label = Label(root, text="Select Number of LSBs:")
-    lsb_label.pack()
-    lsb_combobox = Combobox(root, values=[1, 2, 3, 4, 5, 6, 7, 8])
-    lsb_combobox['state'] = 'readonly'
-    lsb_combobox.current(0) # Default to 1
-    lsb_combobox.pack()
+    save_file_button = Button(decode_button_frame, text="Save File", command=save_encoded_file)
+    save_file_button.grid(row=0, column=2)
 
-    # Button to decode the secret message.
-    decode_button = Button(root, text="Decode Message", command=decode_image)
-    decode_button.pack()
+    after_image = Label(decode_frame)
+    after_image.pack()
 
-    # Button to save the encoded file
-    save_button = Button(root, text="Save Encoded File", command=save_encoded_file)
-    save_button.pack()
+    
+    # Secret Message Frame #
+    secret_message_frame = Frame(root)
+    secret_message_frame.grid(row=1, columnspan=2, padx=50)
+
+    secret_message_entry = Text(secret_message_frame, width=80, height=10)
+    secret_message_entry.pack(fill=X)
+
+    # Frame for the decode encode buttons
+    action_button_frame = Frame(root)
+    action_button_frame.grid(row=2, columnspan=2)
+
+    encode_button = Button(action_button_frame, text="Encode")
+    encode_button.grid(row=0, column=0, padx=5, pady=5)
+
+    decode_button = Button(action_button_frame, text="Decode", command=decode_image)
+    decode_button.grid(row=0, column=1, pady=5)
+
+
+
+    # global before_image, after_image, dropped_image, secret_message_entry, root, lsb_combobox
+    # pygame.mixer.init()
+    # pygame.font.init()
+
+    # root = TkinterDnD.Tk()
+    # root.title("Steganography")
+    # root.geometry("1200x900")  # Increased height to accommodate the new frame
+    # root.resizable(False, False)
+
+
+
+    # # Create a frame to hold the before and after images
+    # frame = Frame(root)
+    # frame.pack()
+
+    # # Create Labels for before and after images
+    # before_image_label = Label(frame, text="Before Image")
+    # before_image_label.grid(row=0, column=0, padx=10, pady=10)
+    # before_image = Label(frame)
+    # before_image.grid(row=1, column=0, padx=10, pady=10)
+
+    # after_image_label = Label(frame, text="After Image")
+    # after_image_label.grid(row=0, column=1, padx=10, pady=10)
+    # after_image = Label(frame)
+    # after_image.grid(row=1, column=1, padx=10, pady=10)
+
+    # button_frame = Frame(root)
+    # button_frame.pack(pady=20)
+
+    # # Button for adding files to show on before image
+    # browse_button = Button(button_frame, text="Select File To Encode", command=browse_file)
+    # browse_button.grid(row=0, column=0, padx=10) 
+
+    # # Button to clear the images
+    # clear_button = Button(button_frame, text="Clear Images", command=clear_images)
+    # clear_button.grid(row=0, column=1, padx=10)
+
+    # # Create a frame to hold the dropped content and drop logic
+    # dropped_frame = Frame(root)
+    # dropped_frame.pack(pady=20)
+
+    # dropped_image_label = Label(dropped_frame, text="Dropped Image")
+    # dropped_image_label.pack()
+    # dropped_image = Label(dropped_frame)
+    # dropped_image.pack()
+
+    # drop_label = Label(root, text="Drag and drop a file here")
+    # drop_label.pack(pady=100)
+
+    # # Bind the drop event to the drop function
+    # root.drop_target_register(DND_FILES)
+    # root.dnd_bind('<<Drop>>', drop)
+
+    # # Secret message input box
+    # secret_message_label = Label(root, text="Enter Secret Message:")
+    # secret_message_label.pack()
+    # secret_message_entry = Entry(root, width=50)
+    # secret_message_entry.pack()
+
+    # # Dropdown to choose number of LSBs.
+    # lsb_label = Label(root, text="Select Number of LSBs:")
+    # lsb_label.pack()
+    # lsb_combobox = Combobox(root, values=[1, 2, 3, 4, 5, 6, 7, 8])
+    # lsb_combobox['state'] = 'readonly'
+    # lsb_combobox.current(0) # Default to 1
+    # lsb_combobox.pack()
+
+    # # Button to decode the secret message.
+    # decode_button = Button(root, text="Decode Message", command=decode_image)
+    # decode_button.pack()
+
+    # # Button to save the encoded file
+    # save_button = Button(root, text="Save Encoded File", command=save_encoded_file)
+    # save_button.pack()
+
 
     root.mainloop()
 
