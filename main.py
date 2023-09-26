@@ -17,6 +17,16 @@ from steganography.util import IMAGE_EXTENSIONS, AUDIO_EXTENSIONS, VIDEO_EXTENSI
 # Initialize Steganography and Decoders
 stega = Steganography()
 
+# TODO(Zibin): Create the layout as discussed
+
+# TODO(Chris): Add a preview frame of the video like the images
+
+# TODO(Zexi): Audio placeholder image and playback functionality
+
+# TODO(Sherlyn): Handle temp file deletion on exit
+
+# TODO(Yok): Finish the project
+
 # Function to handle drop event
 def drop(event):
     global dropped_file_path
