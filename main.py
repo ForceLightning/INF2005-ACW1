@@ -3,6 +3,7 @@ import sys
 import threading
 
 from tkinter import *
+from tkinter.tix import IMAGE
 from tkinter.ttk import *
 from tkinter import filedialog, messagebox
 from PIL import Image, ImageTk
@@ -11,6 +12,7 @@ from moviepy.editor import VideoFileClip
 from tkinterdnd2 import TkinterDnD, DND_FILES
 
 from steganography.steganography import Steganography
+from steganography.util import IMAGE_EXTENSIONS, AUDIO_EXTENSIONS, VIDEO_EXTENSIONS
 
 # Initialize Steganography and Decoders
 stega = Steganography()
@@ -33,7 +35,7 @@ def process_file(file_path, is_dropped=False):
     if file_path:
         file_extension = file_path.split('.')[-1].lower()
         print(f"File Extension: {file_extension}")
-        if file_extension in ('jpg', 'jpeg', 'png', 'gif'):
+        if file_extension in IMAGE_EXTENSIONS:
             if not is_dropped:
                 # Display Before Image
                 display_image(before_image, file_path)
@@ -44,10 +46,12 @@ def process_file(file_path, is_dropped=False):
             else:
                 # Display Dropped Image
                 display_image(dropped_image, file_path)
-        elif file_extension in ('mp3', 'wav'):
+        elif file_extension in AUDIO_EXTENSIONS:
             # Play Audio
             play_audio(file_path)
-        elif file_extension in ('mp4', 'avi', 'mov'):
+        elif file_extension in VIDEO_EXTENSIONS:
+            # TODO(GUI): Add a preview frame of the video like the images
+            # ! and provide some indication that a file has been loaded.
             # Play Video
             play_video(root, file_path)
         else:
@@ -75,7 +79,10 @@ def play_video(root, file_path):
 def play_video_clip(root, file_path):
     try:
         video_clip = VideoFileClip(file_path)
-        video_clip.preview(fps=24, audio=True, threaded=True, winname="Video Preview")
+        video_clip.preview(
+            fps=24, audio=True,
+            # threaded=True, winname="Video Preview" # ! Doesn't work
+        )
     except Exception as e:
         messagebox.showerror("Error", f"Error playing video: {str(e)}")
 
@@ -133,12 +140,13 @@ def main():
 
     # TODO(GUI): Add a dropdown to choose number of LSBs.
 
-    # TODO(GUI): Add a button to encode the secret message.
+    # TODO(GUI): Add a button to encode the secret message? Or encode on the fly?
+
+    # TODO(GUI): Add a button to decode the secret message.
 
     # TODO(GUI): Add a button to open a file dialog for saving the encoded file.
 
     root.mainloop()
-
 
 if __name__ == "__main__":
     main()
