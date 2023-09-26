@@ -3,7 +3,6 @@ import sys
 import threading
 
 from tkinter import *
-from tkinter.tix import IMAGE
 from tkinter.ttk import *
 from tkinter import filedialog, messagebox
 from PIL import Image, ImageTk
@@ -47,7 +46,7 @@ def display_image(label, file_path):
     label.photo = photo
 
 def process_file(file_path, is_dropped=False):
-   
+
     if file_path:
         file_extension = file_path.split('.')[-1].lower()
         print(f"File Extension: {file_extension}")
@@ -56,7 +55,7 @@ def process_file(file_path, is_dropped=False):
                 # Display Before Image
                 display_image(before_image, file_path)
                 # Encode and Display After Image
-                secret_message = secret_message_entry.get()
+                secret_message = secret_message_entry.get("1.0", 'end-1c')
                 # TODO(GUI): Use the selected number of LSBs
                 encoded_image_path = encode_image(file_path, secret_message)
                 global after_image_pil  # Declare it as global to update it
@@ -114,14 +113,14 @@ def save_encoded_file():
     global dropped_file_path, after_image_pil
     num_lsb = int(lsb_combobox.get())
     if after_image_pil:
-        save_path = filedialog.asksaveasfilename(defaultextension=".bmp", filetypes=[("BMP files", "*.bmp")])
+        save_path = filedialog.asksaveasfilename(defaultextension=".png", filetypes=[("PNG files", "*.png")])
         if save_path:
             after_image_pil.save(save_path)
             messagebox.showinfo("Success", "After Image saved successfully.")
     elif dropped_file_path:
         file_extension = dropped_file_path.split('.')[-1].lower()
         if file_extension in IMAGE_EXTENSIONS:
-            save_path = filedialog.asksaveasfilename(defaultextension=".bmp", filetypes=[("BMP files", "*.bmp")])
+            save_path = filedialog.asksaveasfilename(defaultextension=".png", filetypes=[("PNG files", "*.png")])
             if save_path:
                 secret_message = secret_message_entry.get()
                 # Encode the image and save it to the specified path
