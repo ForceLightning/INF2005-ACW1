@@ -1,4 +1,3 @@
-git stash apply
 import os
 import sys
 import threading
@@ -66,10 +65,10 @@ def browse_file():
     process_file(file_path)
 
 # Function to encode image
-def encode_image(file_path, secret_message, save_path=None):
+def encode_image(file_path, secret_message, save_path=None, num_lsb=1):
     # If a save path is provided, use it; otherwise, create a new file name
     encoded_image_path = save_path if save_path else file_path.replace(".", "_encoded.")
-    stega.encode(file_path, secret_message, encoded_image_path)
+    stega.encode(file_path, secret_message, encoded_image_path, num_lsb)
     return encoded_image_path
 
 # Function to decode image
@@ -94,6 +93,7 @@ def encode_av(file_path, secret_message, output_path):
 # Function to save the encoded file
 def save_encoded_file():
     global dropped_file_path, after_image_pil
+    num_lsb = int(lsb_combobox.get())
     if after_image_pil:  
         save_path = filedialog.asksaveasfilename(defaultextension=".png", filetypes=[("PNG files", "*.png")])
         if save_path:
@@ -106,7 +106,7 @@ def save_encoded_file():
             if save_path:
                 secret_message = secret_message_entry.get()
                 # Encode the image and save it to the specified path
-                encode_image(dropped_file_path, secret_message, save_path)
+                encode_image(dropped_file_path, secret_message, save_path, num_lsb)
                 messagebox.showinfo("Success", "Encoded image saved successfully.")
         elif file_extension in AUDIO_EXTENSIONS:
             save_path = filedialog.asksaveasfilename(defaultextension=".wav", filetypes=[("WAV files", "*.wav")])
@@ -156,7 +156,7 @@ dropped_file_path = None
 after_image_pil = None
 
 def main():
-    global before_image, after_image, dropped_image, secret_message_entry, root
+    global before_image, after_image, dropped_image, secret_message_entry, root, lsb_combobox
     pygame.mixer.init()
     pygame.font.init()
 
@@ -212,8 +212,6 @@ def main():
     secret_message_label.pack()
     secret_message_entry = Entry(root, width=50)
     secret_message_entry.pack()
-
-    
 
     # Dropdown to choose number of LSBs.
     lsb_label = Label(root, text="Select Number of LSBs:")
