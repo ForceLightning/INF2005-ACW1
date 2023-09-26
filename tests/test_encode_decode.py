@@ -1,3 +1,4 @@
+import os
 import pytest
 import wave
 
@@ -13,48 +14,51 @@ class TestEncodeDecode:
     @pytest.fixture
     def image(self):
         image_file = "tests/black_128.png"
-        image = cv2.imread(image_file)
-        return [ImageEncoder(), ImageDecoder(), image]
+        return [ImageEncoder(), ImageDecoder(), image_file]
 
     @pytest.fixture
     def audio(self):
         audio_file = "tests/test.wav"
-        audio = wave.open(audio_file, mode="rb")
-        audio_data = audio.readframes(audio.getnframes())
-        audio_bits = audio.getsampwidth() * 8
-        match audio_bits:
-            case 8:
-                audio_data = np.frombuffer(audio_data, dtype=np.uint8)
-            case 16:
-                audio_data = np.frombuffer(audio_data, dtype=np.int16)
-            case 32:
-                audio_data = np.frombuffer(audio_data, dtype=np.int32)
-            case _:
-                audio_data = np.frombuffer(audio_data, dtype=np.uint8)
-        audio_data = audio_data.reshape(-1, audio.getnchannels())
-        return [AudioEncoder(), AudioDecoder(), audio_data]
+        return [AudioEncoder(), AudioDecoder(), audio_file]
     
     @pytest.fixture
     def video(self):
         video_file = "tests/test.mp4"
-        video = cv2.VideoCapture(video_file)
-        video_data = []
-        while video.isOpened():
-            ret, frame = video.read()
-            if ret:
-                video_data.append(frame)
-            else:
-                break
-        video_data = np.array(video_data)
-        return [VideoEncoder(), VideoDecoder(), video_data]
+        return [VideoEncoder(), VideoDecoder(), video_file]
     
     @pytest.fixture
     def lsb(self):
         return list(range(1, 9))
 
     def test_encoder_decoder(self, audio, image, video, lsb):
-        for encoder, decoder, cover_file in [image, audio, video]:
+        for encoder, decoder, cover_filename in [image, audio, video]:
+            cover_file, params = encoder.read_file(cover_filename)
             for num_lsb in lsb:
                 encoded_data = encoder.encode(cover_file, TestEncodeDecode.input_str, num_lsb)
                 decoded_str = decoder.decode(encoded_data, num_lsb)
                 assert TestEncodeDecode.input_str == decoded_str
+
+    def test_file_integrity(self, audio, image, video, lsb):
+        for encoder, decoder, cover_filename in [image, audio, video]:
+            cover_file, params = encoder.read_file(cover_filename)
+            ext = ""
+            match encoder:
+                case ImageEncoder():
+                    ext = "png"
+                case AudioEncoder():
+                    ext = "wav"
+                case VideoEncoder():
+                    ext = "mov"
+                case _:
+                    raise NotImplementedError("Method not implemented.")
+            output_temp_filename = f"tests/output.{ext}"
+            if os.path.isfile(output_temp_filename):
+                os.remove(output_temp_filename)
+            for num_lsb in lsb:
+                encoded_data = encoder.encode(cover_file, TestEncodeDecode.input_str, num_lsb)
+                encoder.write_file(encoded_data, output_temp_filename, params)
+                encoded_read_data, read_data_params = decoder.read_file(output_temp_filename)
+                assert params == read_data_params
+                decoded_str = decoder.decode(encoded_read_data, num_lsb)
+                assert TestEncodeDecode.input_str == decoded_str
+                os.remove(output_temp_filename)

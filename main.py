@@ -42,6 +42,7 @@ def process_file(file_path, is_dropped=False):
                 display_image(before_image, file_path)
                 # Encode and Display After Image
                 secret_message = secret_message_entry.get()
+                # TODO(GUI): Use the selected number of LSBs
                 encoded_image_path = encode_image(file_path, secret_message)
                 global after_image_pil  # Declare it as global to update it
                 after_image_pil = Image.open(encoded_image_path)  # Update after_image_pil
@@ -94,15 +95,15 @@ def encode_av(file_path, secret_message, output_path):
 def save_encoded_file():
     global dropped_file_path, after_image_pil
     num_lsb = int(lsb_combobox.get())
-    if after_image_pil:  
-        save_path = filedialog.asksaveasfilename(defaultextension=".png", filetypes=[("PNG files", "*.png")])
+    if after_image_pil:
+        save_path = filedialog.asksaveasfilename(defaultextension=".bmp", filetypes=[("BMP files", "*.bmp")])
         if save_path:
             after_image_pil.save(save_path)
             messagebox.showinfo("Success", "After Image saved successfully.")
     elif dropped_file_path:
         file_extension = dropped_file_path.split('.')[-1].lower()
         if file_extension in IMAGE_EXTENSIONS:
-            save_path = filedialog.asksaveasfilename(defaultextension=".png", filetypes=[("PNG files", "*.png")])
+            save_path = filedialog.asksaveasfilename(defaultextension=".bmp", filetypes=[("BMP files", "*.bmp")])
             if save_path:
                 secret_message = secret_message_entry.get()
                 # Encode the image and save it to the specified path
@@ -115,7 +116,7 @@ def save_encoded_file():
                 encode_av(dropped_file_path, secret_message, save_path)
                 messagebox.showinfo("Success", "Encoded audio saved successfully.")
         elif file_extension in VIDEO_EXTENSIONS:
-            save_path = filedialog.asksaveasfilename(defaultextension=".mp4", filetypes=[("MP4 files", "*.mp4")])
+            save_path = filedialog.asksaveasfilename(defaultextension=".mov", filetypes=[("MOV files", "*.mov")])
             if save_path:
                 secret_message = secret_message_entry.get()
                 encode_av(dropped_file_path, secret_message, save_path)
@@ -221,17 +222,13 @@ def main():
     lsb_combobox.current(0) # Default to 1
     lsb_combobox.pack()
 
-    # TODO(GUI): Add a button to encode the secret message? Or encode on the fly?
-
     # Button to decode the secret message.
     decode_button = Button(root, text="Decode Message", command=decode_image)
     decode_button.pack()
 
-    # TODO(GUI): Add a button to open a file dialog for saving the encoded file.
     # Button to save the encoded file
     save_button = Button(root, text="Save Encoded File", command=save_encoded_file)
     save_button.pack()
-
 
     root.mainloop()
 
