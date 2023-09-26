@@ -1,9 +1,11 @@
+import io
 import os
 import sys
 
+import warnings
 import abc
-import io
 from typing import Union, NamedTuple
+from collections import namedtuple
 import wave
 from math import prod
 
@@ -12,7 +14,7 @@ from PIL import Image
 import cv2
 import numpy as np
 
-from steganography.util import _data_to_binarray
+import steganography.util as util
 
 
 class Encoder(abc.ABC):
@@ -28,7 +30,7 @@ class Encoder(abc.ABC):
         cover_file_bytes: np.ndarray,
         secret_data: str,
         num_lsb: int = 1,
-    ):
+    ) -> np.ndarray:
         """Encodes secret data into a cover frame using the specified number of LSBs
 
         Args:
@@ -39,10 +41,13 @@ class Encoder(abc.ABC):
         Raises:
             ValueError: Insufficient bytes, need bigger image or less data.
             IndexError: num_lsb must be between 1 and 8
+
+        Returns:
+            numpy.ndarray: Encoded cover file
         """
         n_bytes = prod(cover_file_bytes.shape)
         bit_depth = cover_file_bytes.dtype.itemsize * 8
-        binary_secret_data = _data_to_binarray(secret_data, num_lsb)
+        binary_secret_data = util._data_to_binarray(secret_data, num_lsb)
         and_mask = np.bitwise_or(
             (2 ** bit_depth - 1) - (2 ** num_lsb - 1),
             binary_secret_data
@@ -67,10 +72,12 @@ class Encoder(abc.ABC):
         # encode data into image with the bitwise operations A + (A * B)
         and_op = np.bitwise_and(cover_file_bytes, and_mask)
         or_op = np.bitwise_or(and_op, or_mask)
+        # ensure that the bit depth is the same
+        or_op = or_op.astype(cover_file_bytes.dtype)
         return or_op
 
     @abc.abstractmethod
-    def read_file(self, filename) -> np.ndarray:
+    def read_file(self, filename) -> (np.ndarray, NamedTuple):
         """Reads a file and returns the bytes
 
         Args:
@@ -78,12 +85,32 @@ class Encoder(abc.ABC):
 
         Raises:
             FileNotFoundError: File not found
+            io.UnsupportedOperation: Wrong filetype
 
         Returns:
             np.ndarray: File bytes
         """
         raise NotImplementedError("Method not implemented.")
 
+    @abc.abstractmethod
+    def write_file(self, data: np.ndarray, filename: str, params: NamedTuple = None):
+        """Writes the encoded data to a file
+
+        Args:
+            data (np.ndarray): Encoded data
+            filename (str): Filepath to write the encoded data to
+            params (NamedTuple, optional): Parameters for the file. Defaults to None.
+
+        Raises:
+            FileNotFoundError: File not found
+        """
+        if os.path.isfile(filename):
+            warnings.warn("File already exists. Overwriting file.", UserWarning)
+        else:
+            dir_to_file = os.path.dirname(filename)
+            if not os.path.exists(dir_to_file):
+                os.makedirs(dir_to_file, exist_ok=True)
+                return
 
 class ImageEncoder(Encoder):
     """ Class for encoding data into an image file
@@ -94,15 +121,26 @@ class ImageEncoder(Encoder):
         cover_file_bytes: np.ndarray,
         secret_data: str,
         num_lsb: int = 1,
-    ):
+    ) -> np.ndarray:
         stop_condition = "====="
         secret_data += stop_condition
         return super().encode(cover_file_bytes, secret_data, num_lsb)
 
-    def read_file(self, filename) -> np.ndarray:
-        if os.path.isfile(filename) and os.path.splitext(filename)[1] in [".png", ".jpg", ".jpeg"]:
-            image = cv2.imread(filename)
-            return image
+    def read_file(self, filename) -> (np.ndarray, NamedTuple):
+        if os.path.isfile(filename):
+            ext = os.path.splitext(filename)[1][1:]
+            if ext in util.IMAGE_EXTENSIONS:
+                image = cv2.imread(filename)
+                return image, None
+            else:
+                raise io.UnsupportedOperation(f"File with extension {ext} is not an image.")
+        else:
+            raise FileNotFoundError("File not found.")
+
+    def write_file(self, data: np.ndarray, filename: str, params: NamedTuple = None):
+        super().write_file(data, filename)
+        cv2.imwrite(filename, data)
+
 
 class AudioEncoder(Encoder):
     """This class is for encoding data into an audio file"""
@@ -112,18 +150,41 @@ class AudioEncoder(Encoder):
         cover_file_bytes: np.ndarray,
         secret_data: str,
         num_lsb: int = 1,
-    ):
+    ) -> np.ndarray:
         stop_condition = "====="
         secret_data += stop_condition
         encoded_data = super().encode(cover_file_bytes, secret_data, num_lsb)
         return encoded_data
 
     def read_file(self, filename) -> (np.ndarray, NamedTuple):
-        if os.path.isfile(filename) and os.path.splitext(filename)[1] == ".wav":
-            audio = wave.open(filename, mode="rb")
-            audio_data = audio.readframes(audio.getnframes())
-            audio_data = np.frombuffer(audio_data, dtype=np.uint8)
-            return audio_data, audio.getparams()
+        if os.path.isfile(filename): 
+            ext = os.path.splitext(filename)[1][1:]
+            if ext in util.AUDIO_EXTENSIONS:
+                audio = wave.open(filename, mode="rb")
+                audio_data = audio.readframes(audio.getnframes())
+                audio_bits = audio.getsampwidth() * 8
+                params = audio.getparams()
+                match audio_bits:
+                    case 8:
+                        audio_data = np.frombuffer(audio_data, dtype=np.uint8)
+                    case 16:
+                        audio_data = np.frombuffer(audio_data, dtype=np.int16)
+                    case 32:
+                        audio_data = np.frombuffer(audio_data, dtype=np.int32)
+                    case _:
+                        audio_data = np.frombuffer(audio_data, dtype=np.uint8)
+                audio_data = audio_data.reshape(-1, audio.getnchannels())
+                return audio_data, params
+            else:
+                raise io.UnsupportedOperation(f"File with extension {ext} is not an audio file.")
+        else:
+            raise FileNotFoundError("File not found.")
+
+    def write_file(self, data: np.ndarray, filename: str, params: NamedTuple = None):
+        super().write_file(data, filename)
+        audio = wave.open(filename, mode="wb")
+        audio.setparams(params)
+        audio.writeframes(data.tobytes())
 
 
 class VideoEncoder(Encoder):
@@ -134,16 +195,36 @@ class VideoEncoder(Encoder):
         cover_file_bytes: np.ndarray,
         secret_data: str,
         num_lsb: int = 1,
-    ):
+    ) -> np.ndarray:
         stop_condition = "====="
         secret_data += stop_condition
         encoded_data = super().encode(cover_file_bytes, secret_data, num_lsb)
         return encoded_data
 
-    def read_file(self, filename) -> np.ndarray:
-        if os.path.isfile(filename) and os.path.splitext(filename)[1] in [".mp4", ".avi"]:
-            video = cv2.VideoCapture(filename)
-            return video
+    def read_file(self, filename) -> (np.ndarray, NamedTuple):
+        if os.path.isfile(filename):
+            ext = os.path.splitext(filename)[1][1:]
+            if ext in util.VIDEO_EXTENSIONS:
+                video = cv2.VideoCapture(filename)
+                video_params = namedtuple(
+                    "VideoParams",
+                    ["fps", "width", "height"]
+                )(
+                    video.get(cv2.CAP_PROP_FPS),
+                    video.get(cv2.CAP_PROP_FRAME_WIDTH),
+                    video.get(cv2.CAP_PROP_FRAME_HEIGHT)
+                )
+                video_data = []
+                while video.isOpened():
+                    ret, frame = video.read()
+                    if ret:
+                        video_data.append(frame)
+                    else:
+                        break
+                video_data = np.array(video_data)
+                return video_data, video_params
+            else:
+                raise io.UnsupportedOperation(f"File with extension {ext} is not a video.")
         else:
             raise FileNotFoundError("File not found.")
 
@@ -155,3 +236,11 @@ class VideoEncoder(Encoder):
         minibatch_size: int = 30,
     ):
         raise NotImplementedError("Method not implemented.")
+
+    def write_file(self, data: np.ndarray, filename: str, params: NamedTuple = None):
+        super().write_file(data, filename)
+        fps = params.fps
+        video = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*"mp4v"), fps, (data.shape[1], data.shape[2]), True)
+        for frame in data:
+            video.write(frame)
+        video.release()

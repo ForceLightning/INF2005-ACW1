@@ -8,6 +8,9 @@ numpy = "*"
 pillow = "*"
 opencv-python = "*"
 tqdm = "*"
+pygame = "*"
+moviepy = "*"
+tkinterdnd2 = "*"
 
 [dev-packages]
 ipykernel = "*"
