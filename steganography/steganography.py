@@ -72,12 +72,15 @@ class Steganography:
             if ext in IMAGE_EXTENSIONS:
                 self.encoder = ImageEncoder()
                 self.decoder = ImageDecoder()
+                file_type = "image"
             elif ext in AUDIO_EXTENSIONS:
                 self.encoder = AudioEncoder()
                 self.decoder = AudioDecoder()
+                file_type = "audio"
             elif ext in VIDEO_EXTENSIONS:
                 self.encoder = VideoEncoder()
                 self.decoder = VideoDecoder()
+                file_type = "video"
             else:
                 raise io.UnsupportedOperation(
                     f"File extension '{ext}' not supported.")
@@ -109,15 +112,31 @@ class Steganography:
                     self.encoded_data, output_filename, params)
                 return output_filename
             case True:
-                # Save encoded data to a temp directory
                 if self.temp_dir is None:
                     self.temp_dir = tempfile.TemporaryDirectory()
+                
+                # Name file iteratively in temp directory based on file type 
+                file_count = 1
+                while os.path.exists(os.path.join(self.temp_dir.name, f"{file_type}{file_count}{output_ext}")):
+                    file_count += 1
+                
+                # Save encoded data to temp directory
                 temp_file = os.path.join(
-                    self.temp_dir.name, f"steganography{output_ext}")
+                    self.temp_dir.name, f"{file_type}{file_count}{output_ext}")
                 self.encoder.write_file(self.encoded_data, temp_file, params)
                 return temp_file
             case _:
                 return self.encoded_data
+    
+    # Get temp directory path 
+    def get_temp_file(self):
+        if self.temp_dir:
+            return self.temp_dir.name       
+    
+    # Get temp directory object (to cleanup)
+    def get_temp_dir(self):
+        if self.temp_dir:
+            return self.temp_dir
 
     def decode(
         self,
