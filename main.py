@@ -358,6 +358,16 @@ def tempfile_cleanup():
     temp_path = stega.get_temp_dir()
     temp_path.cleanup()
 
+def clear_all_images():
+    """Clears all the images and resets the global variables."""
+    global dropped_file_path, after_image_pil, after_image_path
+    # Clear the images
+    before_image.config(image='')
+    after_image.config(image='')
+    # Reset the global variables
+    dropped_file_path = None
+    after_image_path = None
+    after_image_pil = None
 
 dropped_file_path = None
 after_image_pil = None
@@ -460,6 +470,9 @@ def main():
     decode_button = Button(action_button_frame,
                            text="Decode", command=decode_image)
     decode_button.grid(row=0, column=2, pady=5)
+
+    clear_all_button = Button(action_button_frame, text="Clear All", command=clear_all_images)
+    clear_all_button.grid(row=0, column=3, padx=5,pady=5)
 
     root.mainloop()
     tempfile_cleanup()
