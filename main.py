@@ -13,12 +13,6 @@ from tkinterdnd2 import TkinterDnD, DND_FILES
 
 from steganography.steganography import Steganography
 from steganography.util import IMAGE_EXTENSIONS, AUDIO_EXTENSIONS, VIDEO_EXTENSIONS
-
-# global variables
-dropped_file_path_to_encode = None
-dropped_file_path_to_decode = None
-after_image_pil = None
-
 # steganography/util.py
 
 # Define image file extensions
@@ -39,10 +33,16 @@ stega = Steganography()
 
 # Function to handle drop event
 def drop(event):
-    global dropped_file_path_to_encode
-    dropped_file_path_to_encode = event.data.strip("{}")
-    print(f"File Path: {dropped_file_path_to_encode}") # For debug
-    process_file(dropped_file_path_to_encode, is_dropped=True)
+    global dropped_file_path
+    dropped_file_path = event.data.strip("{}")
+    print(f"File Path: {dropped_file_path}")  # For debug
+    drop_target = event.widget.winfo_name()  # Get the name of the widget where the file was dropped
+    process_file(dropped_file_path, drop_target)
+    print("Widget Object:", event.widget)
+    print("Widget Name:", event.widget.winfo_name())
+    print("Widget Class:", event.widget.winfo_class())
+
+
 
 def display_image(label, file_path):
     image = Image.open(file_path)
@@ -52,13 +52,16 @@ def display_image(label, file_path):
     label.config(image=photo)
     label.photo = photo
 
-def process_file(file_path, is_dropped=False):
-   
-    if file_path:
+def process_file(file_path, drop_target=None):
+    if drop_target == 'before_image':
+        display_image(before_image, file_path)
+    elif drop_target == 'after_image':
+        display_image(after_image, file_path)
+    elif file_path:
         file_extension = file_path.split('.')[-1].lower()
         print(f"File Extension: {file_extension}")
         if file_extension in IMAGE_EXTENSIONS:
-            if not is_dropped:
+            if not dropped_file_path:
                 # Display Before Image
                 display_image(before_image, file_path)
                 # Encode and Display After Image
@@ -68,9 +71,6 @@ def process_file(file_path, is_dropped=False):
                 global after_image_pil  # Declare it as global to update it
                 after_image_pil = Image.open(encoded_image_path)  # Update after_image_pil
                 display_image(after_image, encoded_image_path)
-            else:
-                # Display Dropped Image
-                display_image(dropped_image, file_path)
         elif file_extension in AUDIO_EXTENSIONS:
             # Play Audio
             display_image(before_image, "tests/audioimage.png")
@@ -98,10 +98,10 @@ def encode_image(file_path, secret_message, save_path=None, num_lsb=1):
 
 # Function to decode image
 def decode_image():
-    global dropped_file_path_to_decode 
-    if dropped_file_path_to_decode:
+    global dropped_file_path 
+    if dropped_file_path:
         try:
-            decoded_message = stega.decode(dropped_file_path_to_decode)
+            decoded_message = stega.decode(dropped_file_path)
             messagebox.showinfo("Decoded Message", f"The decoded message is: {decoded_message}")
         except Exception as e:
             messagebox.showerror("Error", f"Error decoding message: {str(e)}")
@@ -117,46 +117,46 @@ def encode_av(file_path, secret_message, output_path):
 
 # Function to save the encoded file
 def save_encoded_file():
-    global dropped_file_path_to_encode, after_image_pil
+    global dropped_file_path, after_image_pil
     num_lsb = int(lsb_combobox.get())
     if after_image_pil:
         save_path = filedialog.asksaveasfilename(defaultextension=".bmp", filetypes=[("BMP files", "*.bmp")])
         if save_path:
             after_image_pil.save(save_path)
             messagebox.showinfo("Success", "After Image saved successfully.")
-    elif dropped_file_path_to_encode:
-        file_extension = dropped_file_path_to_encode.split('.')[-1].lower()
+    elif dropped_file_path:
+        file_extension = dropped_file_path.split('.')[-1].lower()
         if file_extension in IMAGE_EXTENSIONS:
             save_path = filedialog.asksaveasfilename(defaultextension=".bmp", filetypes=[("BMP files", "*.bmp")])
             if save_path:
                 secret_message = secret_message_entry.get()
                 # Encode the image and save it to the specified path
-                encode_image(dropped_file_path_to_encode, secret_message, save_path, num_lsb)
+                encode_image(dropped_file_path, secret_message, save_path, num_lsb)
                 messagebox.showinfo("Success", "Encoded image saved successfully.")
         elif file_extension in AUDIO_EXTENSIONS:
             save_path = filedialog.asksaveasfilename(defaultextension=".wav", filetypes=[("WAV files", "*.wav")])
             if save_path:
                 secret_message = secret_message_entry.get()
-                encode_av(dropped_file_path_to_encode, secret_message, save_path)
+                encode_av(dropped_file_path, secret_message, save_path)
                 messagebox.showinfo("Success", "Encoded audio saved successfully.")
         elif file_extension in VIDEO_EXTENSIONS:
             save_path = filedialog.asksaveasfilename(defaultextension=".mov", filetypes=[("MOV files", "*.mov")])
             if save_path:
                 secret_message = secret_message_entry.get()
-                encode_av(dropped_file_path_to_encode, secret_message, save_path)
+                encode_av(dropped_file_path, secret_message, save_path)
                 messagebox.showinfo("Success", "Encoded video saved successfully.")
     else:
         messagebox.showwarning("No File", "No dropped file to encode.")
 
 # Clear all file
 def clear_images():
-    global dropped_file_path_to_encode, dropped_file_path_to_decode, after_image_pil
+    global dropped_file_path, after_image_pil
     # Clear the images
     before_image.config(image='')
     after_image.config(image='')
     dropped_image.config(image='')
     # Reset the global variables
-    dropped_file_path_to_encode = None
+    dropped_file_path = None
     after_image_pil = None
 
 def play_audio(file_path):
@@ -187,6 +187,9 @@ def play_video_clip(root, file_path):
     except Exception as e:
         messagebox.showerror("Error", f"Error playing video: {str(e)}")
 
+dropped_file_path = None
+after_image_pil = None
+
 
 def main():
     global before_image, after_image, dropped_image, secret_message_entry, lsb_combobox, root,encode_frame,encode_button_frame
@@ -197,6 +200,10 @@ def main():
     root.title("Steganography")
     root.geometry("900x450")
     root.resizable(False, False)
+
+    # Bind the drop event to the drop function
+    root.drop_target_register(DND_FILES)
+    root.dnd_bind('<<Drop>>', drop)
 
     # Encode Frame #
     encode_frame = Frame(root)
@@ -211,14 +218,26 @@ def main():
 
     # Encode buttons
     load_file_button_encode = Button(encode_button_frame, text="Load File", command=browse_file)
-    load_file_button_encode.grid(row=0, column=0)
+    load_file_button_encode.grid(row=0, column=0, padx=40)
+
+    lsb_frame = Frame(encode_button_frame)
+    lsb_frame.grid(row=1, column=0)
+
+    lsb_label = Label(lsb_frame, text="Select Number of LSBs:")
+    lsb_label.grid(row=1, column=0)  # Place it under the encode buttons
+    lsb_combobox = Combobox(lsb_frame, values=[1, 2, 3, 4, 5, 6])
+    lsb_combobox['state'] = 'readonly'
+    lsb_combobox.current(0)  # Default to 1
+    lsb_combobox.grid(row=1, column=1) 
     
     # play_file_button_encode = Button(encode_button_frame, text="Play File", command=lambda: play_file(file_path))
     # play_file_button_encode.grid(row=0, column=1)
-
-    before_image = Label(encode_frame)
+    before_image = Label(encode_frame, name='before_image', width=60) 
     before_image.pack()
+    before_image.drop_target_register(DND_FILES)
+    before_image.dnd_bind('<<Drop>>', drop)
 
+    
     
     # Decode Frame #
     decode_frame = Frame(root)
@@ -241,14 +260,16 @@ def main():
     save_file_button = Button(decode_button_frame, text="Save File", command=save_encoded_file)
     save_file_button.grid(row=0, column=2)
 
-    after_image = Label(decode_frame)
+    after_image = Label(decode_frame, name='after_image', width=60)  # Add a name for identification
     after_image.pack()
+    after_image.drop_target_register(DND_FILES)
+    after_image.dnd_bind('<<Drop>>', drop)
 
     
     # Secret Message Frame #
     secret_message_frame = Frame(root)
     secret_message_frame.grid(row=1, columnspan=2, padx=50)
-
+    secret_message_label = Label(root, text="Enter Secret Message:")
     secret_message_entry = Text(secret_message_frame, width=80, height=10)
     secret_message_entry.pack(fill=X)
 
@@ -313,9 +334,7 @@ def main():
     # drop_label = Label(root, text="Drag and drop a file here")
     # drop_label.pack(pady=100)
 
-    # # Bind the drop event to the drop function
-    # root.drop_target_register(DND_FILES)
-    # root.dnd_bind('<<Drop>>', drop)
+    
 
     # # Secret message input box
     # secret_message_label = Label(root, text="Enter Secret Message:")
@@ -323,13 +342,7 @@ def main():
     # secret_message_entry = Entry(root, width=50)
     # secret_message_entry.pack()
 
-    # # Dropdown to choose number of LSBs.
-    # lsb_label = Label(root, text="Select Number of LSBs:")
-    # lsb_label.pack()
-    # lsb_combobox = Combobox(root, values=[1, 2, 3, 4, 5, 6, 7, 8])
-    # lsb_combobox['state'] = 'readonly'
-    # lsb_combobox.current(0) # Default to 1
-    # lsb_combobox.pack()
+   
 
     # # Button to decode the secret message.
     # decode_button = Button(root, text="Decode Message", command=decode_image)
