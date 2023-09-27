@@ -1,19 +1,19 @@
+from collections import namedtuple
 import os
 import sys
 
 import abc
 import io
-from typing import Union
+from typing import NamedTuple, Union
 import wave
 from math import prod
 import re
 
 import numpy as np
 import cv2
+from tqdm.auto import tqdm
 
-from steganography.util import _data_to_binstr, _data_to_binarray
-
-
+import steganography.util as util
 class Decoder(abc.ABC):
     def __init__(self, *args, **kwargs):
         self.decoded_data = ""
@@ -48,6 +48,7 @@ class Decoder(abc.ABC):
             str: decoded secret data
         """
         binary_data = ""
+        self.decoded_data = ""
         bit_depth = encoded_frame.dtype.itemsize * 8
         if num_lsb > bit_depth or num_lsb < 1:
             raise ValueError(f"num_lsb must be between 1 and {bit_depth}")
@@ -66,7 +67,7 @@ class Decoder(abc.ABC):
                      for i in range(0, len(binary_data), 8)]
         # iterate over all bytes and convert from bits to characters sequentially
         # until the stop condition is reached
-        for byte in all_bytes:
+        for byte in tqdm(all_bytes):
             self.decoded_data += chr(int(byte, 2))
             if early_stop is not None:
                 if self.decoded_data[-len(early_stop):] == early_stop:
@@ -80,7 +81,7 @@ class Decoder(abc.ABC):
     def read_file(
         self,
         filename: str
-    ) -> np.ndarray[Union[int, np.uint8, np.int16, np.int32]]:
+    ) -> (np.ndarray[Union[int, np.uint8, np.int16, np.int32]], NamedTuple):
         """Reads the file into a numpy array
 
         Args:
@@ -120,7 +121,7 @@ class ImageDecoder(Decoder):
     def read_file(
         self,
         filename: str
-    ) -> np.ndarray[Union[int, np.uint8, np.int16, np.int32]]:
+    ) -> (np.ndarray[Union[int, np.uint8, np.int16, np.int32]], NamedTuple):
         """Reads the image file into a numpy array
 
         Args:
@@ -136,7 +137,7 @@ class ImageDecoder(Decoder):
         image = cv2.imread(filename)
         if image is None:
             raise IOError(f"File {filename} is not a valid image file.")
-        return image
+        return image, None
 
 
 class AudioDecoder(Decoder):
@@ -163,7 +164,7 @@ class AudioDecoder(Decoder):
     def read_file(
         self,
         filename: str
-    ) -> np.ndarray[Union[int, np.uint8, np.int16, np.int32]]:
+    ) -> (np.ndarray[Union[int, np.uint8, np.int16, np.int32]], NamedTuple):
         """Reads the audio file into a numpy array
 
         Args:
@@ -176,15 +177,14 @@ class AudioDecoder(Decoder):
             np.ndarray[Union[int, np.uint8, np.int16, np.int32]]: audio data as a numpy array
         """
         super().read_file(filename)
-        if os.path.split(filename)[1] not in [".wav"]:
+        ext = os.path.splitext(filename)[1][1:]
+        if ext not in util.AUDIO_EXTENSIONS:
             raise ValueError(
                 f"Invalid audio file format. Only .wav files are supported.")
-        try:
-            audio = wave.open(filename, mode="rb")
-        except Exception:
-            raise
+        audio = wave.open(filename, mode="rb")
         audio_data = audio.readframes(audio.getnframes())
         audio_bits = audio.getsampwidth() * 8
+        params = audio.getparams()
         match audio_bits:
             case 8:
                 audio_data = np.frombuffer(audio_data, dtype=np.uint8)
@@ -195,15 +195,19 @@ class AudioDecoder(Decoder):
             case _:
                 audio_data = np.frombuffer(audio_data, dtype=np.uint8)
         audio_data = audio_data.reshape(-1, audio.getnchannels())
-        return audio_data
+        return audio_data, params
 
 
 class VideoDecoder(Decoder):
     """Video decoder class
     """
 
-    def decode(self, encoded_data, num_lsb) -> str:
-        self.decoded_data = super()._decode_frame(encoded_data, num_lsb)
+    def decode(
+        self,
+        encoded_data: np.ndarray,
+        num_lsb: int = 1
+    ) -> str:
+        self.decoded_data = self._batched_decode(encoded_data, num_lsb)
         return self.decoded_data
 
     def _batched_decode(
@@ -247,7 +251,7 @@ class VideoDecoder(Decoder):
     def read_file(
         self,
         filename: str
-    ) -> np.ndarray[Union[int, np.uint8, np.int16, np.int32]]:
+    ) -> (np.ndarray[Union[int, np.uint8, np.int16, np.int32]], NamedTuple):
         """Reads the video file into a numpy array
 
         Args:
@@ -258,6 +262,8 @@ class VideoDecoder(Decoder):
         """
         super().read_file(filename)
         video = cv2.VideoCapture(filename)
+        params = namedtuple("VideoParams", ["fps", "width", "height"])(video.get(
+            cv2.CAP_PROP_FPS), video.get(cv2.CAP_PROP_FRAME_WIDTH), video.get(cv2.CAP_PROP_FRAME_HEIGHT))
         video_data = []
         while video.isOpened():
             ret, frame = video.read()
@@ -266,4 +272,4 @@ class VideoDecoder(Decoder):
             else:
                 break
         video_data = np.array(video_data)
-        return video_data
+        return video_data, params
