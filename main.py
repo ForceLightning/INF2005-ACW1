@@ -1,6 +1,7 @@
 import os
 import sys
 import threading
+import shutil
 
 from typing import Optional, Union
 from tkinter import *
@@ -199,36 +200,45 @@ def encode_av(
 def save_encoded_file():
     """Saves the encoded file to a new file path
     """
-    global dropped_file_path, after_image_pil
-    num_lsb = int(lsb_combobox.get())
-    secret_message = secret_message_entry.get("1.0", 'end-1c')
-    if after_image_pil:
-        save_path = filedialog.asksaveasfilename(
-            defaultextension=".bmp", filetypes=[("BMP files", "*.BMP")])
-        if save_path:
-            after_image_pil.save(save_path)
-            messagebox.showinfo("Success", "After Image saved successfully.")
-    elif dropped_file_path:
+    global dropped_file_path, after_image_pil #, cleanup_needed
+
+    if dropped_file_path:
         file_extension = dropped_file_path.split('.')[-1].lower()
         if file_extension in IMAGE_EXTENSIONS:
-            save_path = filedialog.asksaveasfilename(
-                defaultextension=".bmp", filetypes=[("BMP files", "*.bmp")])
+            save_ext = ".bmp"
+            file_type = "image"
         elif file_extension in AUDIO_EXTENSIONS:
-            save_path = filedialog.asksaveasfilename(
-                defaultextension=".wav", filetypes=[("WAV files", "*.wav")])
+            save_ext = ".wav"
+            file_type = "audio"
         elif file_extension in VIDEO_EXTENSIONS:
             save_path = filedialog.asksaveasfilename(
-                defaultextension=".mov", filetypes=[("MOV files", "*.mov")])
+                defaultextension=".avi", filetypes=[("AVI files", "*.avi")])
         else:
             messagebox.showerror("Error", "Unsupported file format.")
             return
+        
+        save_path = filedialog.asksaveasfilename(defaultextension=save_ext, filetypes=[(f"{save_ext[1:].upper()} files", f"*{save_ext}")])
         if save_path:
-            try:
-                stega.encode(dropped_file_path, secret_message,
-                             save_path, num_lsb)
-            except Exception as e:
-                messagebox.showerror(
-                    "Error", f"Error {type(e)} encoding file: {str(e)}")
+            
+            # Get path to current file to be saved
+            file_count = 1
+            while os.path.exists(os.path.join(stega.get_temp_file(), f"{file_type}{file_count}{save_ext}")):
+                file_count += 1
+            temp_file = os.path.join(
+                    stega.get_temp_file(), f"{file_type}{file_count-1}{save_ext}")
+            
+            # Copy file from temp directory to specified save path
+            shutil.copy(temp_file, save_path)
+            messagebox.showinfo("Success", f"Encoded {file_type} saved successfully.")
+        else:
+            messagebox.showinfo("Failed", f"Encoded {file_type} not saved.")
+            # cleanup_needed = True
+        # try:
+        #         stega.encode(dropped_file_path, secret_message,
+        #                      save_path, num_lsb)
+        #     except Exception as e:
+        #         messagebox.showerror(
+        #             "Error", f"Error {type(e)} encoding file: {str(e)}")
     else:
         messagebox.showwarning("No File", "No dropped file to encode.")
 
@@ -341,13 +351,14 @@ def tempfile_cleanup():
     """Cleans up the temp files on exit
     """
     global temp_path
-    # TODO(Sherlyn): Handle temp file deletion on exit
+    temp_path = stega.get_temp_dir()
+    temp_path.cleanup()
     pass
 
 dropped_file_path = None
 after_image_pil = None
 after_image_path = None
-
+# cleanup_needed = None
 
 def main():
     global before_image, after_image, dropped_image, secret_message_entry, lsb_combobox, root, encode_frame, encode_button_frame, decode_frame, decode_button_frame, after_image_path, play_file_button_decode
@@ -445,10 +456,10 @@ def main():
                            text="Decode", command=decode_image)
     decode_button.grid(row=0, column=2, pady=5)
 
-    root.protocol("WM_DELETE_WINDOW", tempfile_cleanup)
+    # root.protocol("WM_DELETE_WINDOW", tempfile_cleanup)
 
     root.mainloop()
-
+    tempfile_cleanup()
 
 if __name__ == "__main__":
     main()
