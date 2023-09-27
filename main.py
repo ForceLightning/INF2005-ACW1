@@ -13,6 +13,12 @@ from tkinterdnd2 import TkinterDnD, DND_FILES
 
 from steganography.steganography import Steganography
 from steganography.util import IMAGE_EXTENSIONS, AUDIO_EXTENSIONS, VIDEO_EXTENSIONS
+
+# global variables
+dropped_file_path_to_encode = None
+dropped_file_path_to_decode = None
+after_image_pil = None
+
 # steganography/util.py
 
 # Define image file extensions
@@ -33,10 +39,10 @@ stega = Steganography()
 
 # Function to handle drop event
 def drop(event):
-    global dropped_file_path
-    dropped_file_path = event.data.strip("{}")
-    print(f"File Path: {dropped_file_path}") # For debug
-    process_file(dropped_file_path, is_dropped=True)
+    global dropped_file_path_to_encode
+    dropped_file_path_to_encode = event.data.strip("{}")
+    print(f"File Path: {dropped_file_path_to_encode}") # For debug
+    process_file(dropped_file_path_to_encode, is_dropped=True)
 
 def display_image(label, file_path):
     image = Image.open(file_path)
@@ -92,10 +98,10 @@ def encode_image(file_path, secret_message, save_path=None, num_lsb=1):
 
 # Function to decode image
 def decode_image():
-    global dropped_file_path 
-    if dropped_file_path:
+    global dropped_file_path_to_decode 
+    if dropped_file_path_to_decode:
         try:
-            decoded_message = stega.decode(dropped_file_path)
+            decoded_message = stega.decode(dropped_file_path_to_decode)
             messagebox.showinfo("Decoded Message", f"The decoded message is: {decoded_message}")
         except Exception as e:
             messagebox.showerror("Error", f"Error decoding message: {str(e)}")
@@ -111,46 +117,46 @@ def encode_av(file_path, secret_message, output_path):
 
 # Function to save the encoded file
 def save_encoded_file():
-    global dropped_file_path, after_image_pil
+    global dropped_file_path_to_encode, after_image_pil
     num_lsb = int(lsb_combobox.get())
     if after_image_pil:
         save_path = filedialog.asksaveasfilename(defaultextension=".bmp", filetypes=[("BMP files", "*.bmp")])
         if save_path:
             after_image_pil.save(save_path)
             messagebox.showinfo("Success", "After Image saved successfully.")
-    elif dropped_file_path:
-        file_extension = dropped_file_path.split('.')[-1].lower()
+    elif dropped_file_path_to_encode:
+        file_extension = dropped_file_path_to_encode.split('.')[-1].lower()
         if file_extension in IMAGE_EXTENSIONS:
             save_path = filedialog.asksaveasfilename(defaultextension=".bmp", filetypes=[("BMP files", "*.bmp")])
             if save_path:
                 secret_message = secret_message_entry.get()
                 # Encode the image and save it to the specified path
-                encode_image(dropped_file_path, secret_message, save_path, num_lsb)
+                encode_image(dropped_file_path_to_encode, secret_message, save_path, num_lsb)
                 messagebox.showinfo("Success", "Encoded image saved successfully.")
         elif file_extension in AUDIO_EXTENSIONS:
             save_path = filedialog.asksaveasfilename(defaultextension=".wav", filetypes=[("WAV files", "*.wav")])
             if save_path:
                 secret_message = secret_message_entry.get()
-                encode_av(dropped_file_path, secret_message, save_path)
+                encode_av(dropped_file_path_to_encode, secret_message, save_path)
                 messagebox.showinfo("Success", "Encoded audio saved successfully.")
         elif file_extension in VIDEO_EXTENSIONS:
             save_path = filedialog.asksaveasfilename(defaultextension=".mov", filetypes=[("MOV files", "*.mov")])
             if save_path:
                 secret_message = secret_message_entry.get()
-                encode_av(dropped_file_path, secret_message, save_path)
+                encode_av(dropped_file_path_to_encode, secret_message, save_path)
                 messagebox.showinfo("Success", "Encoded video saved successfully.")
     else:
         messagebox.showwarning("No File", "No dropped file to encode.")
 
 # Clear all file
 def clear_images():
-    global dropped_file_path, after_image_pil
+    global dropped_file_path_to_encode, dropped_file_path_to_decode, after_image_pil
     # Clear the images
     before_image.config(image='')
     after_image.config(image='')
     dropped_image.config(image='')
     # Reset the global variables
-    dropped_file_path = None
+    dropped_file_path_to_encode = None
     after_image_pil = None
 
 def play_audio(file_path):
@@ -180,9 +186,6 @@ def play_video_clip(root, file_path):
         )
     except Exception as e:
         messagebox.showerror("Error", f"Error playing video: {str(e)}")
-
-dropped_file_path = None
-after_image_pil = None
 
 
 def main():
