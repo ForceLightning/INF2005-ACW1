@@ -200,7 +200,7 @@ def encode_av(
 def save_encoded_file():
     """Saves the encoded file to a new file path
     """
-    global dropped_file_path, after_image_pil #, cleanup_needed
+    global dropped_file_path, after_image_pil  # , cleanup_needed
 
     if dropped_file_path:
         file_extension = dropped_file_path.split('.')[-1].lower()
@@ -216,20 +216,22 @@ def save_encoded_file():
         else:
             messagebox.showerror("Error", "Unsupported file format.")
             return
-        
-        save_path = filedialog.asksaveasfilename(defaultextension=save_ext, filetypes=[(f"{save_ext[1:].upper()} files", f"*{save_ext}")])
+
+        save_path = filedialog.asksaveasfilename(defaultextension=save_ext, filetypes=[
+                                                 (f"{save_ext[1:].upper()} files", f"*{save_ext}")])
         if save_path:
-            
+
             # Get path to current file to be saved
             file_count = 1
             while os.path.exists(os.path.join(stega.get_temp_file(), f"{file_type}{file_count}{save_ext}")):
                 file_count += 1
             temp_file = os.path.join(
-                    stega.get_temp_file(), f"{file_type}{file_count-1}{save_ext}")
-            
+                stega.get_temp_file(), f"{file_type}{file_count-1}{save_ext}")
+
             # Copy file from temp directory to specified save path
             shutil.copy(temp_file, save_path)
-            messagebox.showinfo("Success", f"Encoded {file_type} saved successfully.")
+            messagebox.showinfo(
+                "Success", f"Encoded {file_type} saved successfully.")
         else:
             messagebox.showinfo("Failed", f"Encoded {file_type} not saved.")
             # cleanup_needed = True
@@ -260,6 +262,7 @@ def encode_file():
         try:
             temp_path = stega.encode(
                 dropped_file_path, secret_message, True, num_lsb)
+            secret_message_entry.delete("1.0", END)
             after_image_path = temp_path
             match stega.encoder:
                 case ImageEncoder():
@@ -347,18 +350,20 @@ def _play_video(root, file_path):
     except Exception as e:
         messagebox.showerror("Error", f"Error playing video: {str(e)}")
 
+
 def tempfile_cleanup():
     """Cleans up the temp files on exit
     """
     global temp_path
     temp_path = stega.get_temp_dir()
     temp_path.cleanup()
-    pass
+
 
 dropped_file_path = None
 after_image_pil = None
 after_image_path = None
 # cleanup_needed = None
+
 
 def main():
     global before_image, after_image, dropped_image, secret_message_entry, lsb_combobox, root, encode_frame, encode_button_frame, decode_frame, decode_button_frame, after_image_path, play_file_button_decode
@@ -456,10 +461,9 @@ def main():
                            text="Decode", command=decode_image)
     decode_button.grid(row=0, column=2, pady=5)
 
-    # root.protocol("WM_DELETE_WINDOW", tempfile_cleanup)
-
     root.mainloop()
     tempfile_cleanup()
+
 
 if __name__ == "__main__":
     main()

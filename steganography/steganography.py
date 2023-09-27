@@ -114,12 +114,12 @@ class Steganography:
             case True:
                 if self.temp_dir is None:
                     self.temp_dir = tempfile.TemporaryDirectory()
-                
-                # Name file iteratively in temp directory based on file type 
+
+                # Name file iteratively in temp directory based on file type
                 file_count = 1
                 while os.path.exists(os.path.join(self.temp_dir.name, f"{file_type}{file_count}{output_ext}")):
                     file_count += 1
-                
+
                 # Save encoded data to temp directory
                 temp_file = os.path.join(
                     self.temp_dir.name, f"{file_type}{file_count}{output_ext}")
@@ -127,14 +127,14 @@ class Steganography:
                 return temp_file
             case _:
                 return self.encoded_data
-    
-    # Get temp directory path 
+
     def get_temp_file(self):
+        """Get temp directory path"""
         if self.temp_dir:
-            return self.temp_dir.name       
-    
-    # Get temp directory object (to cleanup)
+            return self.temp_dir.name
+
     def get_temp_dir(self):
+        """Get temp directory object (to cleanup)"""
         if self.temp_dir:
             return self.temp_dir
 
