@@ -124,6 +124,7 @@ def encode_image(file_path, secret_message, save_path=None, num_lsb=1):
     global after_image_path
     # If a save path is provided, use it; otherwise, create a new file name
     after_image_path = stega.encode(file_path, secret_message, True, num_lsb)
+    secret_message_entry.delete("1.0", END)
     return after_image_path
 
 # Function to decode image
@@ -135,8 +136,6 @@ def decode_image():
         try:
             num_lsb = int(lsb_combobox.get())
             decoded_message = stega.decode(after_image_path, num_lsb)
-            # messagebox.showinfo("Decoded Message",
-            #                     f"The decoded message is: {decoded_message}")
             secret_message_entry.delete("1.0", END)
             secret_message_entry.insert("1.0", decoded_message)
         except Exception as e:
@@ -273,7 +272,7 @@ after_image_path = None
 
 
 def main():
-    global before_image, after_image, dropped_image, secret_message_entry, lsb_combobox, root, encode_frame, encode_button_frame, decode_frame, decode_button_frame, after_image_path
+    global before_image, after_image, dropped_image, secret_message_entry, lsb_combobox, root, encode_frame, encode_button_frame, decode_frame, decode_button_frame, after_image_path, play_file_button_decode
     pygame.mixer.init()
     pygame.font.init()
 
@@ -295,22 +294,13 @@ def main():
 
     # Encode button frame
     encode_button_frame = Frame(encode_frame)
+    # Encode buttons
+    load_file_button_encode = Button(encode_button_frame, text="Load File", command=browse_file)
+    load_file_button_encode.grid(row=0, column=0, padx=5)
+
     encode_button_frame.pack()
 
-    # Encode buttons
 
-    load_file_button_encode = Button(encode_button_frame, text="Load File", command=browse_file)
-    load_file_button_encode.grid(row=0, column=0, padx=40)
-
-    lsb_frame = Frame(encode_button_frame)
-    lsb_frame.grid(row=1, column=0)
-
-    lsb_label = Label(lsb_frame, text="Select Number of LSBs:")
-    lsb_label.grid(row=1, column=0)  # Place it under the encode buttons
-    lsb_combobox = Combobox(lsb_frame, values=[1, 2, 3, 4, 5, 6])
-    lsb_combobox['state'] = 'readonly'
-    lsb_combobox.current(0)  # Default to 1
-    lsb_combobox.grid(row=1, column=1) 
 
 
     # play_file_button_encode = Button(encode_button_frame, text="Play File", command=lambda: play_file(file_path))
@@ -356,16 +346,27 @@ def main():
 
     # Frame for the decode encode buttons
     action_button_frame = Frame(root)
-    action_button_frame.grid(row=2, columnspan=2)
+    action_button_frame.grid(row=2, columnspan=3)
+
+    lsb_frame = Frame(action_button_frame)
+    lsb_frame.grid(row=0, column=0)
+
+    lsb_label = Label(lsb_frame, text="Select Number of LSBs:")
+    lsb_label.grid(row=0, column=0, padx=5, pady=5)  # Place it under the encode buttons
+    lsb_combobox = Combobox(lsb_frame, values=[1, 2, 3, 4, 5, 6])
+    lsb_combobox['state'] = 'readonly'
+    lsb_combobox.current(0)  # Default to 1
+    lsb_combobox.grid(row=0, column=1)
 
     encode_button = Button(action_button_frame,
                            text="Encode", command=encode_file)
-    encode_button.grid(row=0, column=0, padx=5, pady=5)
+    encode_button.grid(row=0, column=1, padx=5, pady=5)
 
     decode_button = Button(action_button_frame,
                            text="Decode", command=decode_image)
-    decode_button.grid(row=0, column=1, pady=5)
+    decode_button.grid(row=0, column=2, pady=5)
 
+    # lsb_label.pack()
     # global before_image, after_image, dropped_image, secret_message_entry, root, lsb_combobox
     # pygame.mixer.init()
     # pygame.font.init()
