@@ -26,13 +26,8 @@ from steganography.util import IMAGE_EXTENSIONS, AUDIO_EXTENSIONS, VIDEO_EXTENSI
 stega = Steganography()
 temp_path = None
 
-# TODO(Sherlyn): Handle temp file deletion on exit
 
 # TODO(Yok): Finish the project
-
-# Function to handle drop event
-# Called when an image/ video/ audio is being dropped
-# (same function, will be called by both encode/ before_image and decode/ after_image frames)
 
 
 def drop(event: Event, encode=True):
@@ -40,6 +35,7 @@ def drop(event: Event, encode=True):
 
     Args:
         event (tkinter.Event): Drop event
+        encode (bool, optional): Selects which frame for the preview to be displayed in. Defaults to True. 
     """
     global dropped_file_path, before_image, after_image
     dropped_file_path = event.data.strip("{}")
@@ -49,15 +45,6 @@ def drop(event: Event, encode=True):
         process_file(dropped_file_path, before_image, encode)
     else:
         process_file(dropped_file_path, after_image, encode)
-    # Get the name of the widget where the file was dropped
-    # drop_target = event.widget.winfo_name()
-    # process_file(dropped_file_path, drop_target, encode)
-    # print("Widget Object:", event.widget)
-    # print("Widget Name:", event.widget.winfo_name())
-    # print("Widget Class:", event.widget.winfo_class())
-
-# Updates Encode/ Decode frame display image
-# Manually called when the drag and drop image is being processed
 
 
 def display_image(label: Label, image: Union[str, Image.Image]):
@@ -110,7 +97,6 @@ def process_file(
                 play_file_button_decode = Button(
                     decode_button_frame, text="Play File", command=lambda: play_audio(file_path))
                 play_file_button_decode.grid(row=0, column=1)
-            # play_audio(file_path)
         elif file_extension in VIDEO_EXTENSIONS:
             video = cv2.VideoCapture(file_path)
             ret, frame = video.read()
@@ -168,9 +154,11 @@ def encode_image(
     """
     global after_image_path
     # If a save path is provided, use it; otherwise, create a new file name
-    after_image_path = stega.encode(file_path, secret_message, save_path, num_lsb)
+    after_image_path = stega.encode(
+        file_path, secret_message, save_path, num_lsb)
     secret_message_entry.delete("1.0", END)
     return after_image_path
+
 
 def decode_image():
     """Decodes the loaded image and displays the decoded message in the secret message entry box
@@ -183,9 +171,11 @@ def decode_image():
             secret_message_entry.delete("1.0", END)
             secret_message_entry.insert("1.0", decoded_message)
         except Exception as e:
-            messagebox.showerror("Error", f"Error decoding message: {str(e)}")
+            messagebox.showerror(
+                "Error", f"Error {type(e)} decoding message: {str(e)}")
     else:
         messagebox.showwarning("No File", "No dropped file to decode.")
+
 
 def encode_av(
     file_path: str,
@@ -202,7 +192,9 @@ def encode_av(
     try:
         stega.encode(file_path, secret_message, output_path)
     except Exception as e:
-        messagebox.showerror("Error", f"Error encoding audio/video: {str(e)}")
+        messagebox.showerror(
+            "Error", f"Error {type(e)} encoding audio/video: {str(e)}")
+
 
 def save_encoded_file():
     """Saves the encoded file to a new file path
@@ -235,12 +227,15 @@ def save_encoded_file():
                 stega.encode(dropped_file_path, secret_message,
                              save_path, num_lsb)
             except Exception as e:
-                messagebox.showerror("Error", f"Error encoding file: {str(e)}")
+                messagebox.showerror(
+                    "Error", f"Error {type(e)} encoding file: {str(e)}")
     else:
         messagebox.showwarning("No File", "No dropped file to encode.")
 
 
 def encode_file():
+    """General encode function that handles encoding for all file types
+    """
     global dropped_file_path, after_image_pil, temp_path, play_file_button_decode, decode_button_frame, after_image_path
     if dropped_file_path:
         secret_message = secret_message_entry.get("1.0", 'end-1c')
@@ -276,7 +271,9 @@ def encode_file():
                         decode_button_frame, text="Play File", command=lambda: play_video(root, temp_path))
                     play_file_button_decode.grid(row=0, column=1)
         except Exception as e:
-            messagebox.showerror("Error", f"Error encoding file: {str(e)}")
+            messagebox.showerror(
+                "Error", f"Error {type(e)} encoding file: {str(e)}")
+
 
 def clear_images():
     """Clears all the images and resets the global variables
@@ -293,6 +290,11 @@ def clear_images():
 
 
 def play_audio(file_path):
+    """Plays the audio file
+
+    Args:
+        file_path (str): File path of the audio file
+    """
     def audio_thread():
         try:
             print("Starting audio playback")
@@ -308,12 +310,24 @@ def play_audio(file_path):
 
 
 def play_video(root, file_path):
+    """Plays the video file
+
+    Args:
+        root (tkinter.Tk): Root window
+        file_path (str): File path of the video file
+    """
     video_thread = threading.Thread(
-        target=play_video_clip, args=(root, file_path))
+        target=_play_video, args=(root, file_path))
     video_thread.start()
 
 
-def play_video_clip(root, file_path):
+def _play_video(root, file_path):
+    """Internal function to play the video file
+
+    Args:
+        root (tkinter.Tk): Root window
+        file_path (str): File path of the video file
+    """
     try:
         video_clip = VideoFileClip(file_path)
         video_clip.preview(
@@ -323,6 +337,12 @@ def play_video_clip(root, file_path):
     except Exception as e:
         messagebox.showerror("Error", f"Error playing video: {str(e)}")
 
+def tempfile_cleanup():
+    """Cleans up the temp files on exit
+    """
+    global temp_path
+    # TODO(Sherlyn): Handle temp file deletion on exit
+    pass
 
 dropped_file_path = None
 after_image_pil = None
@@ -359,8 +379,7 @@ def main():
 
     encode_button_frame.pack()
 
-    # play_file_button_encode = Button(encode_button_frame, text="Play File", command=lambda: play_file(file_path))
-    # play_file_button_encode.grid(row=0, column=1)
+    # Drag and drop location
     before_image = Label(encode_frame, name='before_image', width=60)
     before_image.pack()
     before_image.drop_target_register(DND_FILES)
@@ -389,6 +408,7 @@ def main():
         decode_button_frame, text="Save File", command=save_encoded_file)
     save_file_button.grid(row=0, column=2)
 
+    # Drag and drop location
     after_image = Label(decode_frame, name='after_image',
                         width=60)  # Add a name for identification
     after_image.pack()
@@ -425,67 +445,7 @@ def main():
                            text="Decode", command=decode_image)
     decode_button.grid(row=0, column=2, pady=5)
 
-    # lsb_label.pack()
-    # global before_image, after_image, dropped_image, secret_message_entry, root, lsb_combobox
-    # pygame.mixer.init()
-    # pygame.font.init()
-
-    # root = TkinterDnD.Tk()
-    # root.title("Steganography")
-    # root.geometry("1200x900")  # Increased height to accommodate the new frame
-    # root.resizable(False, False)
-
-    # # Create a frame to hold the before and after images
-    # frame = Frame(root)
-    # frame.pack()
-
-    # # Create Labels for before and after images
-    # before_image_label = Label(frame, text="Before Image")
-    # before_image_label.grid(row=0, column=0, padx=10, pady=10)
-    # before_image = Label(frame)
-    # before_image.grid(row=1, column=0, padx=10, pady=10)
-
-    # after_image_label = Label(frame, text="After Image")
-    # after_image_label.grid(row=0, column=1, padx=10, pady=10)
-    # after_image = Label(frame)
-    # after_image.grid(row=1, column=1, padx=10, pady=10)
-
-    # button_frame = Frame(root)
-    # button_frame.pack(pady=20)
-
-    # # Button for adding files to show on before image
-    # browse_button = Button(button_frame, text="Select File To Encode", command=browse_file)
-    # browse_button.grid(row=0, column=0, padx=10)
-
-    # # Button to clear the images
-    # clear_button = Button(button_frame, text="Clear Images", command=clear_images)
-    # clear_button.grid(row=0, column=1, padx=10)
-
-    # # Create a frame to hold the dropped content and drop logic
-    # dropped_frame = Frame(root)
-    # dropped_frame.pack(pady=20)
-
-    # dropped_image_label = Label(dropped_frame, text="Dropped Image")
-    # dropped_image_label.pack()
-    # dropped_image = Label(dropped_frame)
-    # dropped_image.pack()
-
-    # drop_label = Label(root, text="Drag and drop a file here")
-    # drop_label.pack(pady=100)
-
-    # # Secret message input box
-    # secret_message_label = Label(root, text="Enter Secret Message:")
-    # secret_message_label.pack()
-    # secret_message_entry = Entry(root, width=50)
-    # secret_message_entry.pack()
-
-    # # Button to decode the secret message.
-    # decode_button = Button(root, text="Decode Message", command=decode_image)
-    # decode_button.pack()
-
-    # # Button to save the encoded file
-    # save_button = Button(root, text="Save Encoded File", command=save_encoded_file)
-    # save_button.pack()
+    root.protocol("WM_DELETE_WINDOW", tempfile_cleanup)
 
     root.mainloop()
 
