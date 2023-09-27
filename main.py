@@ -39,10 +39,17 @@ temp_path = None
 
 
 def drop(event):
-    global dropped_file_path
+    global dropped_file_path, before_image, after_image
     dropped_file_path = event.data.strip("{}")
     print(f"File Path: {dropped_file_path}")  # For debug
-    process_file(dropped_file_path, is_dropped=True)
+
+    drop_target = event.widget.winfo_name()  # Get the name of the widget where the file was dropped
+    process_file(dropped_file_path, drop_target)
+    #print("Widget Object:", event.widget)
+    #print("Widget Name:", event.widget.winfo_name())
+    #print("Widget Class:", event.widget.winfo_class())
+
+
 
 
 def display_image(label, image: Union[str, Image.Image]):
@@ -56,7 +63,13 @@ def display_image(label, image: Union[str, Image.Image]):
 
 
 def process_file(file_path, placeholder_image_location, encode=True):
-    if file_path:
+    global after_image_path
+    if placeholder_image_location == 'before_image':
+        display_image(before_image, file_path)        
+    elif placeholder_image_location == 'after_image':
+        display_image(after_image, file_path)
+        after_image_path = file_path
+    elif file_path:
         file_extension = os.path.splitext(file_path)[1][1:].lower()
         print(f"File Extension: {file_extension}")
         if file_extension in IMAGE_EXTENSIONS:
@@ -269,6 +282,10 @@ def main():
     root.geometry("835x700")
     root.resizable(False, False)
 
+    # Bind the drop event to the drop function
+    root.drop_target_register(DND_FILES)
+    root.dnd_bind('<<Drop>>', drop)
+
     # Encode Frame #
     encode_frame = Frame(root)
     encode_frame.grid(row=0, column=0, padx=10, pady=10)
@@ -281,15 +298,27 @@ def main():
     encode_button_frame.pack()
 
     # Encode buttons
-    load_file_button_encode = Button(
-        encode_button_frame, text="Load File", command=browse_file)
-    load_file_button_encode.grid(row=0, column=0)
+
+    load_file_button_encode = Button(encode_button_frame, text="Load File", command=browse_file)
+    load_file_button_encode.grid(row=0, column=0, padx=40)
+
+    lsb_frame = Frame(encode_button_frame)
+    lsb_frame.grid(row=1, column=0)
+
+    lsb_label = Label(lsb_frame, text="Select Number of LSBs:")
+    lsb_label.grid(row=1, column=0)  # Place it under the encode buttons
+    lsb_combobox = Combobox(lsb_frame, values=[1, 2, 3, 4, 5, 6])
+    lsb_combobox['state'] = 'readonly'
+    lsb_combobox.current(0)  # Default to 1
+    lsb_combobox.grid(row=1, column=1) 
+
 
     # play_file_button_encode = Button(encode_button_frame, text="Play File", command=lambda: play_file(file_path))
     # play_file_button_encode.grid(row=0, column=1)
-
-    before_image = Label(encode_frame)
+    before_image = Label(encode_frame, name='before_image', width=60) 
     before_image.pack()
+    before_image.drop_target_register(DND_FILES)
+    before_image.dnd_bind('<<Drop>>', drop)
 
     # Decode Frame #
     decode_frame = Frame(root)
@@ -313,13 +342,15 @@ def main():
         decode_button_frame, text="Save File", command=save_encoded_file)
     save_file_button.grid(row=0, column=2)
 
-    after_image = Label(decode_frame)
+    after_image = Label(decode_frame, name='after_image', width=60)  # Add a name for identification
     after_image.pack()
+    after_image.drop_target_register(DND_FILES)
+    after_image.dnd_bind('<<Drop>>', drop)
 
     # Secret Message Frame #
     secret_message_frame = Frame(root)
     secret_message_frame.grid(row=1, columnspan=2, padx=50)
-
+    secret_message_label = Label(root, text="Enter Secret Message:")
     secret_message_entry = Text(secret_message_frame, width=80, height=10)
     secret_message_entry.pack(fill=X)
 
@@ -382,9 +413,7 @@ def main():
     # drop_label = Label(root, text="Drag and drop a file here")
     # drop_label.pack(pady=100)
 
-    # # Bind the drop event to the drop function
-    # root.drop_target_register(DND_FILES)
-    # root.dnd_bind('<<Drop>>', drop)
+    
 
     # # Secret message input box
     # secret_message_label = Label(root, text="Enter Secret Message:")
@@ -392,14 +421,6 @@ def main():
     # secret_message_entry = Entry(root, width=50)
     # secret_message_entry.pack()
 
-    # Dropdown to choose number of LSBs.
-    lsb_label = Label(action_button_frame, text="Select Number of LSBs:")
-    lsb_label.grid(row=0, column=2, pady=5)
-    lsb_combobox = Combobox(action_button_frame, values=[
-                            1, 2, 3, 4, 5, 6, 7, 8])
-    lsb_combobox['state'] = 'readonly'
-    lsb_combobox.current(0)  # Default to 1
-    lsb_combobox.grid(row=0, column=3, pady=5)
 
     # # Button to decode the secret message.
     # decode_button = Button(root, text="Decode Message", command=decode_image)
