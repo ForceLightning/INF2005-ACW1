@@ -36,8 +36,8 @@ temp_path = None
 # TODO(Yok): Finish the project
 
 # Function to handle drop event
-
-
+# Called when an image/ video/ audio is being dropped 
+# (same function, will be called by both encode/ before_image and decode/ after_image frames)
 def drop(event):
     global dropped_file_path, before_image, after_image
     dropped_file_path = event.data.strip("{}")
@@ -49,9 +49,8 @@ def drop(event):
     #print("Widget Name:", event.widget.winfo_name())
     #print("Widget Class:", event.widget.winfo_class())
 
-
-
-
+# Updates Encode/ Decode frame display image
+# Manually called when the drag and drop image is being processed  
 def display_image(label, image: Union[str, Image.Image]):
     if isinstance(image, str):
         image = Image.open(image)
@@ -128,8 +127,6 @@ def encode_image(file_path, secret_message, save_path=None, num_lsb=1):
     return after_image_path
 
 # Function to decode image
-
-
 def decode_image():
     global after_image_path
     if after_image_path:
@@ -171,7 +168,7 @@ def save_encoded_file():
                 defaultextension=".wav", filetypes=[("WAV files", "*.wav")])
         elif file_extension in VIDEO_EXTENSIONS:
             save_path = filedialog.asksaveasfilename(
-                defaultextension=".avi", filetypes=[("AVI files", "*.avi")])
+                defaultextension=".mov", filetypes=[("MOV files", "*.mov")])
         else:
             messagebox.showerror("Error", "Unsupported file format.")
             return
