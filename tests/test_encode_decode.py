@@ -122,7 +122,7 @@ We'll take our leave and go"""
                 case AudioEncoder():
                     ext = "wav"
                 case VideoEncoder():
-                    ext = "mov"
+                    ext = "avi"
                 case _:
                     raise NotImplementedError("Method not implemented.")
             output_temp_filename = f"tests/output.{ext}"
@@ -138,3 +138,22 @@ We'll take our leave and go"""
                 decoded_str = decoder.decode(encoded_read_data, num_lsb)
                 assert TestEncodeDecode.input_str == decoded_str
                 os.remove(output_temp_filename)
+
+    def test_file_similarity(self, video, lsb):
+        encoder, decoder, cover_filename = video
+        cover_file, params = encoder.read_file(cover_filename)
+        ext = "avi"
+        output_temp_filename = f"tests/output.{ext}"
+        if os.path.isfile(output_temp_filename):
+            os.remove(output_temp_filename)
+        for num_lsb in lsb:
+            encoded_data = encoder.encode(
+                cover_file, TestEncodeDecode.input_str, num_lsb)
+            encoder.write_file(encoded_data, output_temp_filename, params)
+            encoded_read_data, read_data_params = decoder.read_file(
+                output_temp_filename)
+            assert params == read_data_params
+            assert np.allclose(encoded_data, encoded_read_data)
+            decoded_str = decoder.decode(encoded_read_data, num_lsb)
+            assert TestEncodeDecode.input_str == decoded_str
+            os.remove(output_temp_filename)
