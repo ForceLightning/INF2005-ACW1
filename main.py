@@ -159,7 +159,7 @@ def save_encoded_file():
                 defaultextension=".wav", filetypes=[("WAV files", "*.wav")])
         elif file_extension in VIDEO_EXTENSIONS:
             save_path = filedialog.asksaveasfilename(
-                defaultextension=".mov", filetypes=[("MOV files", "*.mov")])
+                defaultextension=".avi", filetypes=[("AVI files", "*.avi")])
         else:
             messagebox.showerror("Error", "Unsupported file format.")
             return
