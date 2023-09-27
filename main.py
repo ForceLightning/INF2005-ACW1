@@ -63,7 +63,13 @@ def display_image(label, image: Union[str, Image.Image]):
 
 
 def process_file(file_path, placeholder_image_location, encode=True):
-    if file_path:
+    global after_image_path
+    if placeholder_image_location == 'before_image':
+        display_image(before_image, file_path)        
+    elif placeholder_image_location == 'after_image':
+        display_image(after_image, file_path)
+        after_image_path = file_path
+    elif file_path:
         file_extension = os.path.splitext(file_path)[1][1:].lower()
         print(f"File Extension: {file_extension}")
         if file_extension in IMAGE_EXTENSIONS:
