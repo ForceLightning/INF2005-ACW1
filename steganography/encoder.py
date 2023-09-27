@@ -40,6 +40,7 @@ class Encoder(abc.ABC):
 
         Raises:
             ValueError: Insufficient bytes, need bigger image or less data.
+            ValueError: Secret data has to be ASCII encoded.
             IndexError: num_lsb must be between 1 and 8
 
         Returns:
@@ -47,13 +48,15 @@ class Encoder(abc.ABC):
         """
         n_bytes = prod(cover_file_bytes.shape)
         bit_depth = cover_file_bytes.dtype.itemsize * 8
+        if len(secret_data) != len(secret_data.encode()):
+            raise ValueError("Secret data must be ASCII.")
         binary_secret_data = util._data_to_binarray(secret_data, num_lsb)
         and_mask = np.bitwise_or(
             (2 ** bit_depth - 1) - (2 ** num_lsb - 1),
             binary_secret_data
         )
         data_len = len(binary_secret_data)
-        if data_len > n_bytes:
+        if data_len * bit_depth > n_bytes * num_lsb:
             raise ValueError(
                 "[!] Insufficient bytes, use a larger image,"
                 + " greater LSBs, or less data."

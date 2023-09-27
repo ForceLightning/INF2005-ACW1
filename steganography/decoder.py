@@ -11,6 +11,7 @@ import re
 
 import numpy as np
 import cv2
+from tqdm.auto import tqdm
 
 import steganography.util as util
 class Decoder(abc.ABC):
@@ -66,7 +67,7 @@ class Decoder(abc.ABC):
                      for i in range(0, len(binary_data), 8)]
         # iterate over all bytes and convert from bits to characters sequentially
         # until the stop condition is reached
-        for byte in all_bytes:
+        for byte in tqdm(all_bytes):
             self.decoded_data += chr(int(byte, 2))
             if early_stop is not None:
                 if self.decoded_data[-len(early_stop):] == early_stop:
