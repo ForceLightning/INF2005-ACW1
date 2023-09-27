@@ -243,7 +243,7 @@ class VideoEncoder(Encoder):
     def write_file(self, data: np.ndarray, filename: str, params: NamedTuple = None):
         super().write_file(data, filename)
         fps = params.fps
-        video = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*"mp4v"), fps, (data.shape[1], data.shape[2]), True)
+        video = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*"FFV1"), fps, (data.shape[1], data.shape[2]), True)
         for frame in data:
             video.write(frame)
         video.release()
