@@ -9,10 +9,9 @@ from collections import namedtuple
 import wave
 from math import prod
 
-import PIL
-from PIL import Image
 import cv2
 import numpy as np
+import ffmpeg
 
 import steganography.util as util
 
@@ -211,11 +210,12 @@ class VideoEncoder(Encoder):
                 video = cv2.VideoCapture(filename)
                 video_params = namedtuple(
                     "VideoParams",
-                    ["fps", "width", "height"]
+                    ["fps", "width", "height", "filename"]
                 )(
                     video.get(cv2.CAP_PROP_FPS),
                     video.get(cv2.CAP_PROP_FRAME_WIDTH),
-                    video.get(cv2.CAP_PROP_FRAME_HEIGHT)
+                    video.get(cv2.CAP_PROP_FRAME_HEIGHT),
+                    filename
                 )
                 video_data = []
                 while video.isOpened():
@@ -243,7 +243,22 @@ class VideoEncoder(Encoder):
     def write_file(self, data: np.ndarray, filename: str, params: NamedTuple = None):
         super().write_file(data, filename)
         fps = params.fps
-        video = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*"FFV1"), fps, (data.shape[1], data.shape[2]), True)
+        video = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*"FFV1"), fps, (data.shape[2], data.shape[1]), True)
         for frame in data:
             video.write(frame)
         video.release()
+        in_file = ffmpeg.input(filename)
+        audio_in_file = params.filename
+        # merge audio from original video file with new video file
+        temp_filename = filename.replace(".avi", "_temp.avi")
+        try:
+            v_input = in_file["v"]
+            a_input = ffmpeg.input(audio_in_file)["a"]
+            joined = ffmpeg.concat(v_input, a_input, v=1, a=1).node
+            output = ffmpeg.output(joined[0], joined[1], temp_filename, vcodec="ffv1")
+            output.run()
+            os.remove(filename)
+            os.rename(temp_filename, filename)
+        except Exception as e:
+            # silently fail if audio file is not found
+            pass

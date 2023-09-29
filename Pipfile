@@ -11,6 +11,7 @@ tqdm = "*"
 pygame = "*"
 moviepy = "*"
 tkinterdnd2 = "*"
+ffmpeg-python = "*"
 
 [dev-packages]
 ipykernel = "*"
