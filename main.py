@@ -164,18 +164,21 @@ def encode_image(
 def decode_image():
     """Decodes the loaded image and displays the decoded message in the secret message entry box
     """
-    global after_image_path
-    if after_image_path:
-        try:
-            num_lsb = int(lsb_combobox.get())
-            decoded_message = stega.decode(after_image_path, num_lsb)
-            secret_message_entry.delete("1.0", END)
-            secret_message_entry.insert("1.0", decoded_message)
-        except Exception as e:
-            messagebox.showerror(
-                "Error", f"Error {type(e)} decoding message: {str(e)}")
-    else:
-        messagebox.showwarning("No File", "No dropped file to decode.")
+    def _decode_image_thread():
+        global after_image_path
+        if after_image_path:
+            try:
+                num_lsb = int(lsb_combobox.get())
+                decoded_message = stega.decode(after_image_path, num_lsb)
+                secret_message_entry.delete("1.0", END)
+                secret_message_entry.insert("1.0", decoded_message)
+            except Exception as e:
+                messagebox.showerror(
+                    "Error", f"Error {type(e)} decoding message: {str(e)}")
+        else:
+            messagebox.showwarning("No File", "No dropped file to decode.")
+    decode_thread = threading.Thread(target=_decode_image_thread)
+    decode_thread.start()
 
 
 def encode_av(
@@ -200,7 +203,7 @@ def encode_av(
 def save_encoded_file():
     """Saves the encoded file to a new file path
     """
-    global dropped_file_path, after_image_pil  # , cleanup_needed
+    global dropped_file_path, after_image_pil
 
     if dropped_file_path:
         file_extension = dropped_file_path.split('.')[-1].lower()
@@ -211,8 +214,8 @@ def save_encoded_file():
             save_ext = ".wav"
             file_type = "audio"
         elif file_extension in VIDEO_EXTENSIONS:
-            save_path = filedialog.asksaveasfilename(
-                defaultextension=".avi", filetypes=[("AVI files", "*.avi")])
+            save_ext = ".avi"
+            file_type = "video"
         else:
             messagebox.showerror("Error", "Unsupported file format.")
             return
@@ -220,7 +223,6 @@ def save_encoded_file():
         save_path = filedialog.asksaveasfilename(defaultextension=save_ext, filetypes=[
                                                  (f"{save_ext[1:].upper()} files", f"*{save_ext}")])
         if save_path:
-
             # Get path to current file to be saved
             file_count = 1
             while os.path.exists(os.path.join(stega.get_temp_file(), f"{file_type}{file_count}{save_ext}")):
@@ -234,13 +236,6 @@ def save_encoded_file():
                 "Success", f"Encoded {file_type} saved successfully.")
         else:
             messagebox.showinfo("Failed", f"Encoded {file_type} not saved.")
-            # cleanup_needed = True
-        # try:
-        #         stega.encode(dropped_file_path, secret_message,
-        #                      save_path, num_lsb)
-        #     except Exception as e:
-        #         messagebox.showerror(
-        #             "Error", f"Error {type(e)} encoding file: {str(e)}")
     else:
         messagebox.showwarning("No File", "No dropped file to encode.")
 
@@ -248,44 +243,47 @@ def save_encoded_file():
 def encode_file():
     """General encode function that handles encoding for all file types
     """
-    global dropped_file_path, after_image_pil, temp_path, play_file_button_decode, decode_button_frame, after_image_path
-    if dropped_file_path:
-        secret_message = secret_message_entry.get("1.0", 'end-1c')
-        if not secret_message:
-            messagebox.showwarning(
-                "No Message", "No secret message to encode.")
-            return
-        if not dropped_file_path:
-            messagebox.showwarning("No File", "No dropped file to encode.")
-            return
-        num_lsb = int(lsb_combobox.get())
-        try:
-            temp_path = stega.encode(
-                dropped_file_path, secret_message, True, num_lsb)
-            secret_message_entry.delete("1.0", END)
-            after_image_path = temp_path
-            match stega.encoder:
-                case ImageEncoder():
-                    display_image(after_image, temp_path)
-                case AudioEncoder():
-                    display_image(after_image, "tests/audioimage.png")
-                    play_file_button_decode = Button(
-                        decode_button_frame, text="Play File", command=lambda: play_audio(temp_path))
-                    play_file_button_decode.grid(row=0, column=1)
-                case VideoEncoder():
-                    video = cv2.VideoCapture(temp_path)
-                    ret, frame = video.read()
-                    if ret:
-                        # Display after Image
-                        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                        after_image_pil = Image.fromarray(frame)
-                        display_image(after_image, after_image_pil)
-                    play_file_button_decode = Button(
-                        decode_button_frame, text="Play File", command=lambda: play_video(root, temp_path))
-                    play_file_button_decode.grid(row=0, column=1)
-        except Exception as e:
-            messagebox.showerror(
-                "Error", f"Error {type(e)} encoding file: {str(e)}")
+    def _encode_file_thread():
+        global dropped_file_path, after_image_pil, temp_path, play_file_button_decode, decode_button_frame, after_image_path
+        if dropped_file_path:
+            secret_message = secret_message_entry.get("1.0", 'end-1c')
+            if not secret_message:
+                messagebox.showwarning(
+                    "No Message", "No secret message to encode.")
+                return
+            if not dropped_file_path:
+                messagebox.showwarning("No File", "No dropped file to encode.")
+                return
+            num_lsb = int(lsb_combobox.get())
+            try:
+                temp_path = stega.encode(
+                    dropped_file_path, secret_message, True, num_lsb)
+                secret_message_entry.delete("1.0", END)
+                after_image_path = temp_path
+                match stega.encoder:
+                    case ImageEncoder():
+                        display_image(after_image, temp_path)
+                    case AudioEncoder():
+                        display_image(after_image, "tests/audioimage.png")
+                        play_file_button_decode = Button(
+                            decode_button_frame, text="Play File", command=lambda: play_audio(temp_path))
+                        play_file_button_decode.grid(row=0, column=1)
+                    case VideoEncoder():
+                        video = cv2.VideoCapture(temp_path)
+                        ret, frame = video.read()
+                        if ret:
+                            # Display after Image
+                            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                            after_image_pil = Image.fromarray(frame)
+                            display_image(after_image, after_image_pil)
+                        play_file_button_decode = Button(
+                            decode_button_frame, text="Play File", command=lambda: play_video(root, temp_path))
+                        play_file_button_decode.grid(row=0, column=1)
+            except Exception as e:
+                messagebox.showerror(
+                    "Error", f"Error {type(e)} encoding file: {str(e)}")
+    encode_thread = threading.Thread(target=_encode_file_thread)
+    encode_thread.start()
 
 
 def clear_images():
@@ -356,7 +354,8 @@ def tempfile_cleanup():
     """
     global temp_path
     temp_path = stega.get_temp_dir()
-    temp_path.cleanup()
+    if temp_path is not None:
+        temp_path.cleanup()
 
 def clear_all_images():
     """Clears all the images and resets the global variables."""

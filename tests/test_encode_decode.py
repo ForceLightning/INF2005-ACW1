@@ -96,7 +96,7 @@ We'll take our leave and go"""
 
     @pytest.fixture
     def video(self):
-        video_file = "tests/test.mp4"
+        video_file = "tests/test2.mp4"
         return [VideoEncoder(), VideoDecoder(), video_file]
 
     @pytest.fixture
